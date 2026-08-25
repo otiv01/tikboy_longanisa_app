@@ -1,0 +1,16 @@
+name: tikboy_longganisa_mobile
+description: A new Flutter project.
+version: 1.0.0+1
+
+# Add this block right here:
+environment:
+  sdk: '^3.13.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  http: ^1.2.2
+  provider: ^6.1.2
+  google_maps_flutter: ^2.5.0
+  geolocator: ^10.1.0
+  # ... (your other dependencies)
