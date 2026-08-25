@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'providers/cart_provider.dart';
-import 'screens/auth/sign_in_screen.dart';
+import 'screens/auth/landing_screen.dart';
 import 'screens/home/home_screen.dart';
 import 'screens/orders/orders_screen.dart';
 import 'screens/cart/cart_screen.dart';
@@ -30,7 +30,7 @@ class TikboyApp extends StatelessWidget {
         primarySwatch: Colors.red,
         useMaterial3: true,
       ),
-      home: const SignInScreen(), // Initial entry point set to Sign In Screen
+      home: const LandingScreen(), // Sets Landing Screen as the root screen
     );
   }
 }
