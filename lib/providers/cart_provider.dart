@@ -21,6 +21,8 @@ class CartProvider with ChangeNotifier {
 
   int get itemCount => _items.values.fold(0, (sum, item) => sum + item.quantity);
 
+  int get distinctItemsCount => _items.length;
+
   double get subtotal {
     double total = 0.0;
     _items.forEach((key, cartItem) {
@@ -29,8 +31,10 @@ class CartProvider with ChangeNotifier {
     return total;
   }
 
-  // Delivery fee logic or free promo handling
-  double get deliveryFee => _items.isEmpty ? 0.0 : 50.00;
+  double get deliveryFee {
+    if (_items.isEmpty) return 0.0;
+    return subtotal >= 300 ? 0.0 : 40.0;
+  }
 
   double get totalAmount => subtotal + deliveryFee;
 
@@ -69,6 +73,11 @@ class CartProvider with ChangeNotifier {
     } else {
       _items.remove(productId);
     }
+    notifyListeners();
+  }
+
+  void removeItem(String productId) {
+    _items.remove(productId);
     notifyListeners();
   }
 

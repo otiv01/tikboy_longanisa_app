@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../providers/auth_provider.dart';
 import '../auth/landing_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
@@ -7,100 +9,232 @@ class ProfileScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('My Profile'),
-        backgroundColor: Colors.red,
-        foregroundColor: Colors.white,
+      backgroundColor: Colors.white,
+      body: SingleChildScrollView(
+        child: Column(
+          children: [
+            _buildHeader(context),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildSectionLabel('ACCOUNT'),
+                  _buildProfileItem(Icons.person_outline, 'Personal Information', 'Update your name and details', Colors.blue),
+                  _buildProfileItem(Icons.location_on_outlined, 'Saved Addresses', 'Manage delivery addresses', Colors.green),
+                  _buildProfileItem(Icons.favorite_border, 'My Favorites', 'Products you\'ve liked', Colors.pink),
+                  
+                  const SizedBox(height: 25),
+                  _buildSectionLabel('ORDERS & REWARDS'),
+                  _buildProfileItem(Icons.history, 'Order History', 'View all your past orders', Colors.orange),
+                  _buildProfileItem(Icons.star_outline, 'Loyalty Points', 'You have 320 pts (₱32 value)', Colors.red),
+                  
+                  const SizedBox(height: 25),
+                  _buildSectionLabel('PREFERENCES'),
+                  _buildProfileItem(Icons.notifications_none, 'Notifications', 'Manage push notifications', Colors.purple),
+                  _buildProfileItem(Icons.lock_outline, 'Privacy & Security', 'Password and security settings', Colors.teal),
+                  _buildProfileItem(Icons.help_outline, 'Help & Support', 'FAQs and contact support', Colors.blueGrey),
+                  
+                  const SizedBox(height: 40),
+                  _buildSignOutButton(context),
+                  const SizedBox(height: 20),
+                  const Center(
+                    child: Text(
+                      'Tikboy Customer App v1.0.0',
+                      style: TextStyle(color: Colors.grey, fontSize: 10),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(16.0),
+    );
+  }
+
+  Widget _buildHeader(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      decoration: const BoxDecoration(
+        color: Color(0xFFD32F2F),
+        borderRadius: BorderRadius.only(
+          bottomLeft: Radius.circular(40),
+          bottomRight: Radius.circular(40),
+        ),
+      ),
+      padding: const EdgeInsets.fromLTRB(20, 60, 20, 30),
+      child: Column(
         children: [
-          // Account Header
-          const Card(
-            child: ListTile(
-              leading: CircleAvatar(
-                backgroundColor: Colors.red,
-                child: Icon(Icons.person, color: Colors.white),
+          Row(
+            children: [
+              Stack(
+                children: [
+                  Container(
+                    width: 80,
+                    height: 80,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    alignment: Alignment.center,
+                    child: const Text(
+                      'C',
+                      style: TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                  Positioned(
+                    bottom: 0,
+                    right: 0,
+                    child: Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+                      child: const Icon(Icons.camera_alt, size: 14, color: Colors.grey),
+                    ),
+                  ),
+                ],
               ),
-              title: Text('Customer Account', style: TextStyle(fontWeight: FontWeight.bold)),
-              subtitle: Text('Regular Member'),
-            ),
-          ),
-          const SizedBox(height: 16),
-
-          // Profile Options
-          ListTile(
-            leading: const Icon(Icons.person_outline),
-            title: const Text('Personal Information'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () {},
-          ),
-          ListTile(
-            leading: const Icon(Icons.location_on_outlined),
-            title: const Text('Saved Addresses'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () {},
-          ),
-          ListTile(
-            leading: const Icon(Icons.history),
-            title: const Text('Order History'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () {},
-          ),
-          ListTile(
-            leading: const Icon(Icons.notifications_outlined),
-            title: const Text('Notifications'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () {},
-          ),
-          const Divider(height: 32),
-
-          // Sign Out Button
-          ElevatedButton.icon(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red[50],
-              foregroundColor: Colors.red,
-              elevation: 0,
-              padding: const EdgeInsets.symmetric(vertical: 14),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-                side: const BorderSide(color: Colors.red),
+              const SizedBox(width: 20),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Customer',
+                      style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        _buildHeaderBadge(Icons.star, '320 pts'),
+                        const SizedBox(width: 8),
+                        _buildHeaderBadge(null, 'Regular Member'),
+                      ],
+                    ),
+                  ],
+                ),
               ),
-            ),
-            icon: const Icon(Icons.logout),
-            label: const Text(
-              'Sign Out',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-            ),
-            onPressed: () => _showSignOutDialog(context),
+              IconButton(
+                icon: const Icon(Icons.edit_outlined, color: Colors.white70),
+                onPressed: () {},
+              ),
+            ],
+          ),
+          const SizedBox(height: 30),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _buildStatItem('12', 'Orders'),
+              _buildStatItem('8', 'Reviews'),
+              _buildStatItem('5', 'Favorites'),
+            ],
           ),
         ],
       ),
     );
   }
 
-  // Sign Out Confirmation Dialog
+  Widget _buildHeaderBadge(IconData? icon, String label) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.2),
+        borderRadius: BorderRadius.circular(15),
+      ),
+      child: Row(
+        children: [
+          if (icon != null) ...[
+            Icon(icon, color: Colors.orange, size: 12),
+            const SizedBox(width: 4),
+          ],
+          Text(label, style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatItem(String value, String label) {
+    return Column(
+      children: [
+        Text(value, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 4),
+        Text(label, style: const TextStyle(color: Colors.white70, fontSize: 12)),
+      ],
+    );
+  }
+
+  Widget _buildSectionLabel(String label) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 15),
+      child: Text(
+        label,
+        style: TextStyle(color: Colors.grey[600], fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1),
+      ),
+    );
+  }
+
+  Widget _buildProfileItem(IconData icon, String title, String subtitle, Color iconColor) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      decoration: BoxDecoration(
+        color: Colors.grey[50],
+        borderRadius: BorderRadius.circular(15),
+        border: Border.all(color: Colors.grey[100]!),
+      ),
+      child: ListTile(
+        leading: Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(color: iconColor.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(10)),
+          child: Icon(icon, color: iconColor, size: 20),
+        ),
+        title: Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+        subtitle: Text(subtitle, style: const TextStyle(fontSize: 11, color: Colors.grey)),
+        trailing: const Icon(Icons.chevron_right, color: Colors.grey, size: 18),
+        onTap: () {},
+      ),
+    );
+  }
+
+  Widget _buildSignOutButton(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: Colors.red[50],
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.red[100]!),
+      ),
+      child: ListTile(
+        leading: Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(color: Colors.red[100], borderRadius: BorderRadius.circular(10)),
+          child: const Icon(Icons.logout, color: Colors.red, size: 20),
+        ),
+        title: const Text('Sign Out', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+        trailing: const Icon(Icons.chevron_right, color: Colors.red, size: 18),
+        onTap: () => _showSignOutDialog(context),
+      ),
+    );
+  }
+
   void _showSignOutDialog(BuildContext context) {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Sign Out'),
-        content: const Text('Are you sure you want to sign out of your account?'),
+        content: const Text('Are you sure you want to sign out?'),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
-          ),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
           TextButton(
             onPressed: () {
-              Navigator.of(ctx).pop();
-              // Clears all previous routes and redirects back to Landing Screen
+              Navigator.pop(ctx);
+              Provider.of<AuthProvider>(context, listen: false).logout();
               Navigator.of(context).pushAndRemoveUntil(
                 MaterialPageRoute(builder: (_) => const LandingScreen()),
-                    (route) => false,
+                (route) => false,
               );
             },
-            child: const Text('Sign Out', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+            child: const Text('Sign Out', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),

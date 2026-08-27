@@ -27,31 +27,49 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: _screens[_selectedIndex],
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _selectedIndex,
-        selectedItemColor: Colors.red,
-        unselectedItemColor: Colors.grey,
-        type: BottomNavigationBarType.fixed,
-        onTap: (index) => setState(() => _selectedIndex = index),
-        items: [
-          const BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-          const BottomNavigationBarItem(
-            icon: Icon(Icons.receipt_long),
+      body: IndexedStack(
+        index: _selectedIndex,
+        children: _screens,
+      ),
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: _selectedIndex,
+        onDestinationSelected: (index) => setState(() => _selectedIndex = index),
+        indicatorColor: Colors.red[50],
+        backgroundColor: Colors.white,
+        elevation: 10,
+        destinations: [
+          const NavigationDestination(
+            icon: Icon(Icons.home_outlined),
+            selectedIcon: Icon(Icons.home, color: Colors.red),
+            label: 'Home',
+          ),
+          const NavigationDestination(
+            icon: Icon(Icons.assignment_outlined),
+            selectedIcon: Icon(Icons.assignment, color: Colors.red),
             label: 'Orders',
           ),
-          BottomNavigationBarItem(
+          NavigationDestination(
             icon: Consumer<CartProvider>(
               builder: (_, cart, child) => Badge(
+                backgroundColor: Colors.red,
                 label: Text('${cart.itemCount}'),
                 isLabelVisible: cart.itemCount > 0,
-                child: const Icon(Icons.shopping_cart),
+                child: const Icon(Icons.shopping_cart_outlined),
+              ),
+            ),
+            selectedIcon: Consumer<CartProvider>(
+              builder: (_, cart, child) => Badge(
+                backgroundColor: Colors.red,
+                label: Text('${cart.itemCount}'),
+                isLabelVisible: cart.itemCount > 0,
+                child: const Icon(Icons.shopping_cart, color: Colors.red),
               ),
             ),
             label: 'Cart',
           ),
-          const BottomNavigationBarItem(
-            icon: Icon(Icons.person),
+          const NavigationDestination(
+            icon: Icon(Icons.person_outline),
+            selectedIcon: Icon(Icons.person, color: Colors.red),
             label: 'Profile',
           ),
         ],

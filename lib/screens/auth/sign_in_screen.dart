@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../providers/auth_provider.dart';
+import '../../main_navigation.dart';
 import 'sign_up_screen.dart';
-import '../../main.dart';
 
 class SignInScreen extends StatefulWidget {
   const SignInScreen({super.key});
@@ -18,14 +20,15 @@ class _SignInScreenState extends State<SignInScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(backgroundColor: Colors.transparent, elevation: 0, foregroundColor: Colors.black),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24.0),
+          padding: const EdgeInsets.symmetric(horizontal: 24.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const SizedBox(height: 40),
-              const Icon(Icons.fastfood, size: 70, color: Colors.red),
+              const SizedBox(height: 20),
+              const Icon(Icons.fastfood, size: 80, color: Colors.red),
               const SizedBox(height: 16),
               const Text(
                 'Tikboy Longganisa',
@@ -47,7 +50,9 @@ class _SignInScreenState extends State<SignInScreen> {
                 decoration: InputDecoration(
                   labelText: 'Email Address',
                   prefixIcon: const Icon(Icons.email_outlined),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  filled: true,
+                  fillColor: Colors.grey[50],
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide.none),
                 ),
               ),
               const SizedBox(height: 16),
@@ -59,16 +64,17 @@ class _SignInScreenState extends State<SignInScreen> {
                 decoration: InputDecoration(
                   labelText: 'Password',
                   prefixIcon: const Icon(Icons.lock_outline),
+                  filled: true,
+                  fillColor: Colors.grey[50],
                   suffixIcon: IconButton(
                     icon: Icon(_obscurePassword ? Icons.visibility_off : Icons.visibility),
                     onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
                   ),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide.none),
                 ),
               ),
               const SizedBox(height: 12),
 
-              // Remember Me & Forgot Password
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -79,12 +85,12 @@ class _SignInScreenState extends State<SignInScreen> {
                         activeColor: Colors.red,
                         onChanged: (val) => setState(() => _rememberMe = val ?? false),
                       ),
-                      const Text('Remember me'),
+                      const Text('Remember me', style: TextStyle(fontSize: 12)),
                     ],
                   ),
                   TextButton(
                     onPressed: () {},
-                    child: const Text('Forgot Password?', style: TextStyle(color: Colors.red)),
+                    child: const Text('Forgot Password?', style: TextStyle(color: Colors.red, fontSize: 12)),
                   ),
                 ],
               ),
@@ -94,19 +100,28 @@ class _SignInScreenState extends State<SignInScreen> {
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.red,
+                  foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                  elevation: 0,
                 ),
                 onPressed: () {
-                  Navigator.of(context).pushReplacement(
+                  // Perform login
+                  Provider.of<AuthProvider>(context, listen: false).login(
+                    _emailController.text,
+                    _passwordController.text,
+                  );
+                  
+                  // Navigate to Main Navigation and clear stack
+                  Navigator.of(context).pushAndRemoveUntil(
                     MaterialPageRoute(builder: (_) => const MainNavigationScreen()),
+                    (route) => false,
                   );
                 },
-                child: const Text('Sign In', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                child: const Text('Sign In', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
               ),
               const SizedBox(height: 24),
 
-              // Navigate to Sign Up
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [

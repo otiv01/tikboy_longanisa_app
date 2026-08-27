@@ -8,57 +8,235 @@ class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Colors.red,
-        foregroundColor: Colors.white,
-        title: const Text('Hello, Customer! 👋'), // Greeting requirement
-        elevation: 0,
+      backgroundColor: Colors.white,
+      body: SafeArea(
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildHeader(context),
+              _buildSearchBar(),
+              _buildPromoBanner(),
+              _buildSectionHeader('Bestsellers', onSeeAll: () {}),
+              _buildBestsellers(context),
+              _buildSectionHeader('Our Products'),
+              _buildCategories(),
+              _buildProductGrid(context),
+            ],
+          ),
+        ),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
+    );
+  }
+
+  Widget _buildHeader(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Good day,',
+                style: TextStyle(color: Colors.grey[600], fontSize: 14),
+              ),
+              const Row(
+                children: [
+                  Text(
+                    'Customer',
+                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                  ),
+                  SizedBox(width: 5),
+                  Text('👋', style: TextStyle(fontSize: 20)),
+                ],
+              ),
+            ],
+          ),
+          Row(
+            children: [
+              _buildIconButton(Icons.shopping_cart_outlined, () {}),
+              const SizedBox(width: 10),
+              _buildIconButton(Icons.notifications_none_rounded, () {}),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildIconButton(IconData icon, VoidCallback onTap) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.grey[100],
+        shape: BoxShape.circle,
+      ),
+      child: IconButton(
+        icon: Icon(icon, color: Colors.black87),
+        onPressed: onTap,
+      ),
+    );
+  }
+
+  Widget _buildSearchBar() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+      child: TextField(
+        decoration: InputDecoration(
+          hintText: 'Search products...',
+          prefixIcon: const Icon(Icons.search, color: Colors.grey),
+          filled: true,
+          fillColor: Colors.grey[100],
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(15),
+            borderSide: BorderSide.none,
+          ),
+          contentPadding: const EdgeInsets.symmetric(vertical: 0),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPromoBanner() {
+    return Container(
+      margin: const EdgeInsets.all(20),
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFFE57373), Color(0xFFD32F2F)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.2),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Text(
+              '🔥 LIMITED OFFER',
+              style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+            ),
+          ),
+          const SizedBox(height: 15),
+          const Text(
+            'Taste the Authentic\nFlavor!',
+            style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Free delivery on orders above ₱300',
+            style: TextStyle(color: Colors.white70, fontSize: 12),
+          ),
+          const SizedBox(height: 15),
+          ElevatedButton(
+            onPressed: () {},
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.white,
+              foregroundColor: Colors.red,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 0),
+            ),
+            child: const Text('Order Now', style: TextStyle(fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSectionHeader(String title, {VoidCallback? onSeeAll}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Row(
+            children: [
+              if (title == 'Bestsellers') const Text('🔥 ', style: TextStyle(fontSize: 18)),
+              Text(
+                title,
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+          if (onSeeAll != null)
+            TextButton(
+              onPressed: onSeeAll,
+              child: const Text('See all', style: TextStyle(color: Colors.redAccent, fontSize: 12)),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBestsellers(BuildContext context) {
+    return SizedBox(
+      height: 220,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 15),
+        children: [
+          _buildBestsellerCard(context, 'p1', 'Longganisa Classic', 80, 'https://via.placeholder.com/150'),
+          _buildBestsellerCard(context, 'p2', 'Longganisa Sweet', 85, 'https://via.placeholder.com/150'),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBestsellerCard(BuildContext context, String id, String name, double price, String imageUrl) {
+    return Container(
+      width: 160,
+      margin: const EdgeInsets.symmetric(horizontal: 5),
+      child: Card(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+        elevation: 2,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            TextField(
-              decoration: InputDecoration(
-                hintText: 'Search for longganisa...',
-                prefixIcon: const Icon(Icons.search),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                filled: true,
-                fillColor: Colors.grey[200],
+            ClipRRect(
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(15)),
+              child: Container(
+                color: Colors.grey[200],
+                height: 100,
+                width: double.infinity,
+                child: const Icon(Icons.fastfood, color: Colors.red, size: 40),
               ),
             ),
-            const SizedBox(height: 20),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.orangeAccent,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Column(
+            Padding(
+              padding: const EdgeInsets.all(10.0),
+              child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Special Promo! 🎉', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
-                  SizedBox(height: 8),
-                  Text('Free delivery on orders above ₱300', style: TextStyle(fontSize: 14, color: Colors.white)), // Promotional requirement[cite: 1]
+                  Text(name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14), maxLines: 1, overflow: TextOverflow.ellipsis),
+                  const SizedBox(height: 4),
+                  Text('₱${price.toInt()}', style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 30,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        Provider.of<CartProvider>(context, listen: false).addItem(id, name, price);
+                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$name added to cart'), duration: const Duration(milliseconds: 500)));
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red,
+                        foregroundColor: Colors.white,
+                        padding: EdgeInsets.zero,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      ),
+                      child: const Text('+ Add', style: TextStyle(fontSize: 12)),
+                    ),
+                  ),
                 ],
               ),
-            ),
-            const SizedBox(height: 24),
-            const Text('Popular Bestsellers', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 12),
-            GridView.count(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              crossAxisCount: 2,
-              crossAxisSpacing: 16,
-              mainAxisSpacing: 16,
-              childAspectRatio: 0.65,
-              children: [
-                _buildProductCard(context, 'p1', 'Longganisa Classic', 150.00), // Thesis product requirement[cite: 1]
-                _buildProductCard(context, 'p2', 'Longganisa Sweet', 160.00),   // Thesis product requirement[cite: 1]
-              ],
             ),
           ],
         ),
@@ -66,45 +244,117 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildProductCard(BuildContext context, String id, String name, double price) {
-    final cart = Provider.of<CartProvider>(context, listen: false);
+  Widget _buildCategories() {
+    final categories = ['All', 'Longganisa', 'Embutido', 'Bundle'];
+    return SizedBox(
+      height: 50,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 15),
+        itemCount: categories.length,
+        itemBuilder: (ctx, i) {
+          final isSelected = i == 0;
+          return Container(
+            margin: const EdgeInsets.symmetric(horizontal: 5, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            decoration: BoxDecoration(
+              color: isSelected ? Colors.red : Colors.grey[100],
+              borderRadius: BorderRadius.circular(10),
+            ),
+            alignment: Alignment.center,
+            child: Text(
+              categories[i],
+              style: TextStyle(
+                color: isSelected ? Colors.white : Colors.grey[600],
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
 
-    return Card(
-      elevation: 3,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+  Widget _buildProductGrid(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(15.0),
+      child: GridView.count(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        crossAxisCount: 2,
+        childAspectRatio: 0.75,
+        crossAxisSpacing: 10,
+        mainAxisSpacing: 10,
         children: [
-          Expanded(
-            child: Container(
-              decoration: const BoxDecoration(color: Colors.grey, borderRadius: BorderRadius.vertical(top: Radius.circular(12))),
-              child: const Center(child: Icon(Icons.fastfood, color: Colors.white, size: 40)),
+          _buildGridCard(context, 'p1', 'Longganisa Classic', 80, '4.8', '124'),
+          _buildGridCard(context, 'p2', 'Longganisa Sweet', 85, '4.9', '45'),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildGridCard(BuildContext context, String id, String name, double price, String rating, String reviews) {
+    return Card(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+      child: Stack(
+        children: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              ClipRRect(
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(15)),
+                child: Container(
+                  color: Colors.grey[200],
+                  height: 120,
+                  width: double.infinity,
+                  child: const Icon(Icons.fastfood, color: Colors.red, size: 50),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                    const Text('per pack (6 pcs)', style: TextStyle(color: Colors.grey, fontSize: 10)),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        const Icon(Icons.star, color: Colors.orange, size: 12),
+                        const SizedBox(width: 2),
+                        Text(rating, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                        Text(' ($reviews)', style: const TextStyle(color: Colors.grey, fontSize: 10)),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Text('₱${price.toInt()}', style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 14)),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          Positioned(
+            bottom: 8,
+            right: 8,
+            child: GestureDetector(
+              onTap: () {
+                Provider.of<CartProvider>(context, listen: false).addItem(id, name, price);
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$name added to cart'), duration: const Duration(milliseconds: 500)));
+              },
+              child: Container(
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(color: Colors.red[50], shape: BoxShape.circle),
+                child: const Icon(Icons.add, color: Colors.red, size: 20),
+              ),
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(name, style: const TextStyle(fontWeight: FontWeight.bold), maxLines: 1, overflow: TextOverflow.ellipsis),
-                const SizedBox(height: 4),
-                Text('₱${price.toStringAsFixed(2)}', style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 8),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
-                    onPressed: () {
-                      cart.addItem(id, name, price);
-                      ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('$name added to cart!'), duration: const Duration(seconds: 1)),
-                      );
-                    },
-                    child: const Text('Add to Cart', style: TextStyle(fontSize: 12)),
-                  ),
-                ),
-              ],
+          Positioned(
+            top: 8,
+            left: 8,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(color: Colors.red, borderRadius: BorderRadius.circular(4)),
+              child: const Text('BESTSELLER', style: TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold)),
             ),
           ),
         ],
