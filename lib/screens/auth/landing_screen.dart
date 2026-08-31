@@ -17,20 +17,13 @@ class LandingScreen extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const Spacer(),
-              // Branding Icon & App Name
-              const Hero(
+              // Branding Logo
+              Hero(
                 tag: 'logo',
-                child: Icon(Icons.fastfood, size: 100, color: Colors.red),
-              ),
-              const SizedBox(height: 24),
-              const Text(
-                'Tikboy Longganisa',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 32,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.red,
-                  letterSpacing: 1.2,
+                child: Image.asset(
+                  'assets/app_logo.png',
+                  height: 180,
+                  fit: BoxFit.contain,
                 ),
               ),
               const SizedBox(height: 12),

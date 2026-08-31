@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'track_order_screen.dart';
 
 class OrdersScreen extends StatelessWidget {
   const OrdersScreen({super.key});
@@ -22,7 +23,7 @@ class OrdersScreen extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
         children: [
           _buildSectionTitle('Active Orders', hasDot: true),
-          _buildActiveOrderCard(),
+          _buildActiveOrderCard(context),
           const SizedBox(height: 25),
           _buildSectionTitle('Order History'),
           _buildHistoryOrderCard(
@@ -82,7 +83,7 @@ class OrdersScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildActiveOrderCard() {
+  Widget _buildActiveOrderCard(BuildContext context) {
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(
@@ -126,9 +127,9 @@ class OrdersScreen extends StatelessWidget {
             const Divider(height: 30),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text('Total', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey)),
-                const Text('₱310', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.red, fontSize: 16)),
+              children: const [
+                Text('Total', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey)),
+                Text('₱310', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.red, fontSize: 16)),
               ],
             ),
             const SizedBox(height: 20),
@@ -136,7 +137,14 @@ class OrdersScreen extends StatelessWidget {
               width: double.infinity,
               height: 45,
               child: ElevatedButton.icon(
-                onPressed: () {},
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const TrackOrderScreen(orderId: 'ORD-2026-001'),
+                    ),
+                  );
+                },
                 icon: const Icon(Icons.directions_bike, size: 18),
                 label: const Text('Track Order', style: TextStyle(fontWeight: FontWeight.bold)),
                 style: ElevatedButton.styleFrom(
@@ -187,7 +195,7 @@ class OrdersScreen extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                   decoration: BoxDecoration(
-                    color: statusColor.withValues(alpha: 0.1),
+                    color: statusColor.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Row(

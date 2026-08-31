@@ -2,6 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../auth/landing_screen.dart';
+import '../notifications/notification_screen.dart';
+import 'help_support_screen.dart';
+import 'privacy_security_screen.dart';
+import 'order_history_screen.dart';
+import 'personal_info_screen.dart';
+import 'saved_addresses_screen.dart';
+import 'favorites_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -20,20 +27,83 @@ class ProfileScreen extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _buildSectionLabel('ACCOUNT'),
-                  _buildProfileItem(Icons.person_outline, 'Personal Information', 'Update your name and details', Colors.blue),
-                  _buildProfileItem(Icons.location_on_outlined, 'Saved Addresses', 'Manage delivery addresses', Colors.green),
-                  _buildProfileItem(Icons.favorite_border, 'My Favorites', 'Products you\'ve liked', Colors.pink),
+                  _buildProfileItem(
+                    Icons.person_outline,
+                    'Personal Information',
+                    'Update your name and details',
+                    Colors.blue,
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const PersonalInfoScreen()),
+                    ),
+                  ),
+                  _buildProfileItem(
+                    Icons.location_on_outlined,
+                    'Saved Addresses',
+                    'Manage delivery addresses',
+                    Colors.green,
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const SavedAddressesScreen()),
+                    ),
+                  ),
+                  _buildProfileItem(
+                    Icons.favorite_border,
+                    'My Favorites',
+                    'Products you\'ve liked',
+                    Colors.pink,
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const FavoritesScreen()),
+                    ),
+                  ),
                   
                   const SizedBox(height: 25),
                   _buildSectionLabel('ORDERS & REWARDS'),
-                  _buildProfileItem(Icons.history, 'Order History', 'View all your past orders', Colors.orange),
+                  _buildProfileItem(
+                    Icons.history,
+                    'Order History',
+                    'View all your past orders',
+                    Colors.orange,
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const OrderHistoryScreen()),
+                    ),
+                  ),
                   _buildProfileItem(Icons.star_outline, 'Loyalty Points', 'You have 320 pts (₱32 value)', Colors.red),
                   
                   const SizedBox(height: 25),
                   _buildSectionLabel('PREFERENCES'),
-                  _buildProfileItem(Icons.notifications_none, 'Notifications', 'Manage push notifications', Colors.purple),
-                  _buildProfileItem(Icons.lock_outline, 'Privacy & Security', 'Password and security settings', Colors.teal),
-                  _buildProfileItem(Icons.help_outline, 'Help & Support', 'FAQs and contact support', Colors.blueGrey),
+                  _buildProfileItem(
+                    Icons.notifications_none,
+                    'Notifications',
+                    'Manage push notifications',
+                    Colors.purple,
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const NotificationScreen()),
+                    ),
+                  ),
+                  _buildProfileItem(
+                    Icons.lock_outline,
+                    'Privacy & Security',
+                    'Password and security settings',
+                    Colors.teal,
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const PrivacySecurityScreen()),
+                    ),
+                  ),
+                  _buildProfileItem(
+                    Icons.help_outline,
+                    'Help & Support',
+                    'FAQs and contact support',
+                    Colors.blueGrey,
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const HelpSupportScreen()),
+                    ),
+                  ),
                   
                   const SizedBox(height: 40),
                   _buildSignOutButton(context),
@@ -75,7 +145,7 @@ class ProfileScreen extends StatelessWidget {
                     width: 80,
                     height: 80,
                     decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.2),
+                      color: Colors.white.withOpacity(0.2),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     alignment: Alignment.center,
@@ -139,7 +209,7 @@ class ProfileScreen extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.2),
+        color: Colors.white.withOpacity(0.2),
         borderRadius: BorderRadius.circular(15),
       ),
       child: Row(
@@ -174,7 +244,7 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildProfileItem(IconData icon, String title, String subtitle, Color iconColor) {
+  Widget _buildProfileItem(IconData icon, String title, String subtitle, Color iconColor, {VoidCallback? onTap}) {
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       decoration: BoxDecoration(
@@ -185,13 +255,13 @@ class ProfileScreen extends StatelessWidget {
       child: ListTile(
         leading: Container(
           padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(color: iconColor.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(10)),
+          decoration: BoxDecoration(color: iconColor.withOpacity(0.1), borderRadius: BorderRadius.circular(10)),
           child: Icon(icon, color: iconColor, size: 20),
         ),
         title: Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
         subtitle: Text(subtitle, style: const TextStyle(fontSize: 11, color: Colors.grey)),
         trailing: const Icon(Icons.chevron_right, color: Colors.grey, size: 18),
-        onTap: () {},
+        onTap: onTap,
       ),
     );
   }

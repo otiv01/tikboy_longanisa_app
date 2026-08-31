@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/cart_provider.dart';
+import '../../providers/notification_provider.dart';
+import '../notifications/notification_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -35,30 +37,50 @@ class HomeScreen extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Good day,',
-                style: TextStyle(color: Colors.grey[600], fontSize: 14),
-              ),
-              const Row(
-                children: [
-                  Text(
-                    'Customer',
-                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-                  ),
-                  SizedBox(width: 5),
-                  Text('👋', style: TextStyle(fontSize: 20)),
-                ],
-              ),
-            ],
+          GestureDetector(
+            onTap: () {
+              // Navigation to profile can be added here
+            },
+            child: CircleAvatar(
+              radius: 22,
+              backgroundColor: Colors.red[50],
+              child: const Icon(Icons.person, color: Colors.red, size: 28),
+            ),
           ),
           Row(
             children: [
               _buildIconButton(Icons.shopping_cart_outlined, () {}),
               const SizedBox(width: 10),
-              _buildIconButton(Icons.notifications_none_rounded, () {}),
+              Consumer<NotificationProvider>(
+                builder: (context, provider, child) {
+                  return Stack(
+                    children: [
+                      _buildIconButton(
+                        Icons.notifications_none_rounded,
+                        () => Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const NotificationScreen()),
+                        ),
+                      ),
+                      if (provider.unreadCount > 0)
+                        Positioned(
+                          right: 8,
+                          top: 8,
+                          child: Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
+                            constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                            child: Text(
+                              '${provider.unreadCount}',
+                              style: const TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold),
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                        ),
+                    ],
+                  );
+                },
+              ),
             ],
           ),
         ],
@@ -117,7 +139,7 @@ class HomeScreen extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.2),
+              color: Colors.white.withOpacity(0.2),
               borderRadius: BorderRadius.circular(10),
             ),
             child: const Text(

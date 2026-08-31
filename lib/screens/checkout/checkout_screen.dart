@@ -81,6 +81,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       value: title,
       groupValue: _selectedPayment,
       onChanged: (value) => setState(() => _selectedPayment = value!),
+      activeColor: Colors.red,
     );
   }
 

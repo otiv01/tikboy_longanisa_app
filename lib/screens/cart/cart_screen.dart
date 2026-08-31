@@ -209,7 +209,7 @@ class CartScreen extends StatelessWidget {
                   borderRadius: BorderRadius.circular(10),
                   child: LinearProgressIndicator(
                     value: progress,
-                    backgroundColor: Colors.red.withValues(alpha: 0.1),
+                    backgroundColor: Colors.red.withOpacity(0.1),
                     valueColor: const AlwaysStoppedAnimation<Color>(Colors.red),
                     minHeight: 6,
                   ),

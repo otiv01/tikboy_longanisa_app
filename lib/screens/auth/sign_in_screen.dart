@@ -28,14 +28,15 @@ class _SignInScreenState extends State<SignInScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const SizedBox(height: 20),
-              const Icon(Icons.fastfood, size: 80, color: Colors.red),
-              const SizedBox(height: 16),
-              const Text(
-                'Tikboy Longganisa',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.red),
+              Hero(
+                tag: 'logo',
+                child: Image.asset(
+                  'assets/app_logo.png',
+                  height: 120,
+                  fit: BoxFit.contain,
+                ),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 16),
               const Text(
                 'Sign in to continue ordering',
                 textAlign: TextAlign.center,
