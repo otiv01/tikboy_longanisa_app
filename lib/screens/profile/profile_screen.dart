@@ -9,6 +9,7 @@ import 'order_history_screen.dart';
 import 'personal_info_screen.dart';
 import 'saved_addresses_screen.dart';
 import 'favorites_screen.dart';
+import 'loyalty_points_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -70,7 +71,16 @@ class ProfileScreen extends StatelessWidget {
                       MaterialPageRoute(builder: (_) => const OrderHistoryScreen()),
                     ),
                   ),
-                  _buildProfileItem(Icons.star_outline, 'Loyalty Points', 'You have 320 pts (₱32 value)', Colors.red),
+                  _buildProfileItem(
+                    Icons.star_outline,
+                    'Loyalty Points',
+                    'You have 320 pts (₱32 value)',
+                    Colors.red,
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const LoyaltyPointsScreen()),
+                    ),
+                  ),
                   
                   const SizedBox(height: 25),
                   _buildSectionLabel('PREFERENCES'),
