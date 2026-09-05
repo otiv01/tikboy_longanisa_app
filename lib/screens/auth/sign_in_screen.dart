@@ -16,6 +16,32 @@ class _SignInScreenState extends State<SignInScreen> {
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
   bool _rememberMe = false;
+  bool _isLoading = false;
+
+  Future<void> _handleLogin() async {
+    setState(() => _isLoading = true);
+    try {
+      await Provider.of<AuthProvider>(context, listen: false).login(
+        _emailController.text,
+        _passwordController.text,
+      );
+
+      if (mounted) {
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => const MainNavigationScreen()),
+          (route) => false,
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.toString()), backgroundColor: Colors.red),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -106,20 +132,14 @@ class _SignInScreenState extends State<SignInScreen> {
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
                   elevation: 0,
                 ),
-                onPressed: () {
-                  // Perform login
-                  Provider.of<AuthProvider>(context, listen: false).login(
-                    _emailController.text,
-                    _passwordController.text,
-                  );
-                  
-                  // Navigate to Main Navigation and clear stack
-                  Navigator.of(context).pushAndRemoveUntil(
-                    MaterialPageRoute(builder: (_) => const MainNavigationScreen()),
-                    (route) => false,
-                  );
-                },
-                child: const Text('Sign In', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                onPressed: _isLoading ? null : _handleLogin,
+                child: _isLoading
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                      )
+                    : const Text('Sign In', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
               ),
               const SizedBox(height: 24),
 

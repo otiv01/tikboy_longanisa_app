@@ -158,8 +158,6 @@ class NotificationScreen extends StatelessWidget {
         return Colors.orange[50] ?? Colors.orange.withOpacity(0.1);
       case NotificationType.account:
         return Colors.green[50] ?? Colors.green.withOpacity(0.1);
-      default:
-        return Colors.grey[50]!;
     }
   }
 }

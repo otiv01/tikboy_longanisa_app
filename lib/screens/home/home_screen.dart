@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/cart_provider.dart';
 import '../../providers/notification_provider.dart';
+import '../../services/directus_api_service.dart';
+import '../../models/product_model.dart';
 import '../notifications/notification_screen.dart';
 
 class HomeScreen extends StatelessWidget {
@@ -9,23 +11,43 @@ class HomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final apiService = DirectusApiService();
+
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildHeader(context),
-              _buildSearchBar(),
-              _buildPromoBanner(),
-              _buildSectionHeader('Bestsellers', onSeeAll: () {}),
-              _buildBestsellers(context),
-              _buildSectionHeader('Our Products'),
-              _buildCategories(),
-              _buildProductGrid(context),
-            ],
-          ),
+        child: FutureBuilder<List<Product>>(
+          future: apiService.fetchProducts(),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            } else if (snapshot.hasError) {
+              return Center(child: Text('Error: ${snapshot.error}'));
+            } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+              return const Center(child: Text('No products available'));
+            }
+
+            final products = snapshot.data!;
+            final bestsellers = products.where((p) => p.isBestseller).toList();
+
+            return SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildHeader(context),
+                  _buildSearchBar(),
+                  _buildPromoBanner(),
+                  if (bestsellers.isNotEmpty) ...[
+                    _buildSectionHeader('Bestsellers', onSeeAll: () {}),
+                    _buildBestsellers(context, bestsellers),
+                  ],
+                  _buildSectionHeader('Our Products'),
+                  _buildCategories(),
+                  _buildProductGrid(context, products),
+                ],
+              ),
+            );
+          },
         ),
       ),
     );
@@ -198,21 +220,19 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildBestsellers(BuildContext context) {
+  Widget _buildBestsellers(BuildContext context, List<Product> bestsellers) {
     return SizedBox(
       height: 220,
-      child: ListView(
+      child: ListView.builder(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 15),
-        children: [
-          _buildBestsellerCard(context, 'p1', 'Longganisa Classic', 80, 'https://via.placeholder.com/150'),
-          _buildBestsellerCard(context, 'p2', 'Longganisa Sweet', 85, 'https://via.placeholder.com/150'),
-        ],
+        itemCount: bestsellers.length,
+        itemBuilder: (context, index) => _buildBestsellerCard(context, bestsellers[index]),
       ),
     );
   }
 
-  Widget _buildBestsellerCard(BuildContext context, String id, String name, double price, String imageUrl) {
+  Widget _buildBestsellerCard(BuildContext context, Product product) {
     return Container(
       width: 160,
       margin: const EdgeInsets.symmetric(horizontal: 5),
@@ -228,7 +248,9 @@ class HomeScreen extends StatelessWidget {
                 color: Colors.grey[200],
                 height: 100,
                 width: double.infinity,
-                child: const Icon(Icons.fastfood, color: Colors.red, size: 40),
+                child: product.imageUrl != null && product.imageUrl!.isNotEmpty
+                    ? Image.network(product.imageUrl!, fit: BoxFit.cover)
+                    : const Icon(Icons.fastfood, color: Colors.red, size: 40),
               ),
             ),
             Padding(
@@ -236,17 +258,17 @@ class HomeScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14), maxLines: 1, overflow: TextOverflow.ellipsis),
+                  Text(product.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14), maxLines: 1, overflow: TextOverflow.ellipsis),
                   const SizedBox(height: 4),
-                  Text('₱${price.toInt()}', style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+                  Text('₱${product.price.toInt()}', style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 8),
                   SizedBox(
                     width: double.infinity,
                     height: 30,
                     child: ElevatedButton(
                       onPressed: () {
-                        Provider.of<CartProvider>(context, listen: false).addItem(id, name, price);
-                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$name added to cart'), duration: const Duration(milliseconds: 500)));
+                        Provider.of<CartProvider>(context, listen: false).addItem(product.id.toString(), product.name, product.price);
+                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${product.name} added to cart'), duration: const Duration(milliseconds: 500)));
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.red,
@@ -297,25 +319,29 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildProductGrid(BuildContext context) {
+  Widget _buildProductGrid(BuildContext context, List<Product> products) {
     return Padding(
       padding: const EdgeInsets.all(15.0),
-      child: GridView.count(
+      child: GridView.builder(
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
-        crossAxisCount: 2,
-        childAspectRatio: 0.75,
-        crossAxisSpacing: 10,
-        mainAxisSpacing: 10,
-        children: [
-          _buildGridCard(context, 'p1', 'Longganisa Classic', 80, '4.8', '124'),
-          _buildGridCard(context, 'p2', 'Longganisa Sweet', 85, '4.9', '45'),
-        ],
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2,
+          childAspectRatio: 0.75,
+          crossAxisSpacing: 10,
+          mainAxisSpacing: 10,
+        ),
+        itemCount: products.length,
+        itemBuilder: (context, index) => _buildGridCard(context, products[index]),
       ),
     );
   }
 
-  Widget _buildGridCard(BuildContext context, String id, String name, double price, String rating, String reviews) {
+  Widget _buildGridCard(BuildContext context, Product product) {
+    final String imageUrl = (product.imageUrl != null && !product.imageUrl!.startsWith('http'))
+        ? 'http://localhost:8055/assets/${product.imageUrl}'
+        : product.imageUrl ?? '';
+
     return Card(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
       child: Stack(
@@ -329,7 +355,13 @@ class HomeScreen extends StatelessWidget {
                   color: Colors.grey[200],
                   height: 120,
                   width: double.infinity,
-                  child: const Icon(Icons.fastfood, color: Colors.red, size: 50),
+                  child: imageUrl.isNotEmpty
+                      ? Image.network(
+                          imageUrl,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) => const Icon(Icons.broken_image, color: Colors.grey),
+                        )
+                      : const Icon(Icons.fastfood, color: Colors.red, size: 50),
                 ),
               ),
               Padding(
@@ -337,19 +369,19 @@ class HomeScreen extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                    Text(product.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
                     const Text('per pack (6 pcs)', style: TextStyle(color: Colors.grey, fontSize: 10)),
                     const SizedBox(height: 4),
                     Row(
                       children: [
                         const Icon(Icons.star, color: Colors.orange, size: 12),
                         const SizedBox(width: 2),
-                        Text(rating, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
-                        Text(' ($reviews)', style: const TextStyle(color: Colors.grey, fontSize: 10)),
+                        const Text('4.8', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                        Text(' (120)', style: const TextStyle(color: Colors.grey, fontSize: 10)),
                       ],
                     ),
                     const SizedBox(height: 8),
-                    Text('₱${price.toInt()}', style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 14)),
+                    Text('₱${product.price.toInt()}', style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 14)),
                   ],
                 ),
               ),
@@ -360,8 +392,8 @@ class HomeScreen extends StatelessWidget {
             right: 8,
             child: GestureDetector(
               onTap: () {
-                Provider.of<CartProvider>(context, listen: false).addItem(id, name, price);
-                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$name added to cart'), duration: const Duration(milliseconds: 500)));
+                Provider.of<CartProvider>(context, listen: false).addItem(product.id.toString(), product.name, product.price);
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${product.name} added to cart'), duration: const Duration(milliseconds: 500)));
               },
               child: Container(
                 padding: const EdgeInsets.all(4),
@@ -370,15 +402,16 @@ class HomeScreen extends StatelessWidget {
               ),
             ),
           ),
-          Positioned(
-            top: 8,
-            left: 8,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-              decoration: BoxDecoration(color: Colors.red, borderRadius: BorderRadius.circular(4)),
-              child: const Text('BESTSELLER', style: TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold)),
+          if (product.isBestseller)
+            Positioned(
+              top: 8,
+              left: 8,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(color: Colors.red, borderRadius: BorderRadius.circular(4)),
+                child: const Text('BESTSELLER', style: TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold)),
+              ),
             ),
-          ),
         ],
       ),
     );

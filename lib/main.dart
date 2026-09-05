@@ -4,7 +4,6 @@ import 'providers/auth_provider.dart';
 import 'providers/cart_provider.dart';
 import 'providers/notification_provider.dart';
 import 'main_navigation.dart';
-import 'screens/auth/landing_screen.dart';
 
 void main() {
   runApp(
@@ -31,15 +30,8 @@ class TikboyApp extends StatelessWidget {
         primarySwatch: Colors.red,
         useMaterial3: true,
       ),
-      home: Consumer<AuthProvider>(
-        builder: (context, auth, child) {
-          if (auth.isAuthenticated) {
-            return const MainNavigationScreen();
-          } else {
-            return const LandingScreen();
-          }
-        },
-      ),
+      // TEMPORARY: Skip login to see your live products!
+      home: const MainNavigationScreen(),
     );
   }
 }
