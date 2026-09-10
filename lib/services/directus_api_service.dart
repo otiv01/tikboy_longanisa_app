@@ -1,10 +1,11 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../models/product_model.dart';
+import '../models/order_model.dart';
 
 class DirectusApiService {
-  // ⚠️ Replace with your actual Computer's IP Address (e.g., '192.168.x.x')
-  final String baseUrl = 'http://localhost:8055';
+  // 📱 Using your correct local Wi-Fi IP address
+  final String baseUrl = 'http://192.168.1.19:8055'; 
 
   // 1. Login
   Future<Map<String, dynamic>> login(String email, String password) async {
@@ -39,15 +40,17 @@ class DirectusApiService {
           'email': email,
           'password': password,
           'first_name': firstName,
-          'role': '8d43c22b-586e-4f36-9304-4c125197825d', // TODO: You might need to change this to your "Customer" role ID
+          'role': '1919cd62-03e5-4b2e-899f-928a0c2e1558',
         }),
       );
 
-      if (response.statusCode != 200 && response.statusCode != 204) {
+      if (response.statusCode != 200 && response.statusCode != 204 && response.statusCode != 201) {
         final error = json.decode(response.body);
-        throw Exception(error['errors']?[0]['message'] ?? 'Registration failed');
+        final errorMessage = error['errors']?[0]['message'] ?? 'Registration failed';
+        throw Exception(errorMessage);
       }
     } catch (e) {
+      if (e is Exception) rethrow;
       throw Exception('Connection error: $e');
     }
   }
@@ -66,6 +69,57 @@ class DirectusApiService {
         throw Exception('Failed to load products: ${response.statusCode}');
       }
     } catch (e) {
+      throw Exception('Network error: $e');
+    }
+  }
+
+  // 4. Create Order
+  Future<void> createOrder(OrderModel order, String? token) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/items/orders'),
+        headers: {
+          'Content-Type': 'application/json',
+          if (token != null) 'Authorization': 'Bearer $token',
+        },
+        body: json.encode(order.toJson()),
+      );
+
+      if (response.statusCode != 200 && response.statusCode != 204 && response.statusCode != 201) {
+        final error = json.decode(response.body);
+        final errorCode = error['errors']?[0]['extensions']?['code'];
+        if (errorCode == 'TOKEN_EXPIRED') {
+          throw Exception('SESSION_EXPIRED');
+        }
+        throw Exception(error['errors']?[0]['message'] ?? 'Failed to place order');
+      }
+    } catch (e) {
+      if (e is Exception) rethrow;
+      throw Exception('Connection error: $e');
+    }
+  }
+
+  // 5. Fetch Orders
+  Future<List<OrderModel>> fetchOrders(String? token) async {
+    try {
+      // ⚠️ Removed sort to avoid the date_created 403 error
+      final response = await http.get(
+        Uri.parse('$baseUrl/items/orders'),
+        headers: {
+          if (token != null) 'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final List<dynamic> data = json.decode(response.body)['data'];
+        return data.map((json) => OrderModel.fromJson(json)).toList();
+      } else {
+        final errorBody = json.decode(response.body);
+        final message = errorBody['errors']?[0]['message'] ?? 'Unknown error';
+        throw Exception('Failed to load orders: ${response.statusCode} - $message');
+      }
+    } catch (e) {
+      if (e is Exception) rethrow;
       throw Exception('Network error: $e');
     }
   }

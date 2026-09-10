@@ -1,8 +1,31 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:intl/intl.dart';
+import '../../models/order_model.dart';
+import '../../services/directus_api_service.dart';
+import '../../providers/auth_provider.dart';
 import 'track_order_screen.dart';
 
-class OrdersScreen extends StatelessWidget {
+class OrdersScreen extends StatefulWidget {
   const OrdersScreen({super.key});
+
+  @override
+  State<OrdersScreen> createState() => _OrdersScreenState();
+}
+
+class _OrdersScreenState extends State<OrdersScreen> {
+  late Future<List<OrderModel>> _ordersFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _refreshOrders();
+  }
+
+  void _refreshOrders() {
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    _ordersFuture = DirectusApiService().fetchOrders(auth.accessToken);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -15,52 +38,43 @@ class OrdersScreen extends StatelessWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh, color: Colors.grey),
-            onPressed: () {},
+            onPressed: () => setState(() => _refreshOrders()),
           ),
         ],
       ),
-      body: ListView(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-        children: [
-          _buildSectionTitle('Active Orders', hasDot: true),
-          _buildActiveOrderCard(context),
-          const SizedBox(height: 25),
-          _buildSectionTitle('Order History'),
-          _buildHistoryOrderCard(
-            orderId: 'ORD-2026-002',
-            date: 'Mar 28, 2026 • 10:15 AM',
-            status: 'Delivered',
-            statusColor: Colors.teal,
-            statusIcon: Icons.check_circle_outline,
-            items: [
-              {'name': 'Tikboy Classic Breakfast Bundle', 'price': 260},
-            ],
-            total: 300,
-          ),
-          _buildHistoryOrderCard(
-            orderId: 'ORD-2026-003',
-            date: 'Mar 25, 2026 • 4:00 PM',
-            status: 'Delivered',
-            statusColor: Colors.teal,
-            statusIcon: Icons.check_circle_outline,
-            items: [
-              {'name': 'Tikboy Longganisa Sweet', 'qty': 3, 'price': 255},
-              {'name': 'Tikboy Longganisa Spicy', 'qty': 1, 'price': 85},
-            ],
-            total: 380,
-          ),
-          _buildHistoryOrderCard(
-            orderId: 'ORD-2026-004',
-            date: 'Mar 20, 2026 • 8:00 AM',
-            status: 'Cancelled',
-            statusColor: Colors.grey,
-            statusIcon: Icons.cancel_outlined,
-            items: [
-              {'name': 'Tikboy Embutido Regular', 'qty': 2, 'price': 240},
-            ],
-            total: 280,
-          ),
-        ],
+      body: FutureBuilder<List<OrderModel>>(
+        future: _ordersFuture,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          } else if (snapshot.hasError) {
+            return Center(child: Text('Error: ${snapshot.error}'));
+          } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+            return const Center(child: Text('No orders yet.'));
+          }
+
+          final orders = snapshot.data!;
+          final activeOrders = orders.where((o) => o.status != 'Delivered' && o.status != 'Cancelled').toList();
+          final orderHistory = orders.where((o) => o.status == 'Delivered' || o.status == 'Cancelled').toList();
+
+          return RefreshIndicator(
+            onRefresh: () async => setState(() => _refreshOrders()),
+            child: ListView(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              children: [
+                if (activeOrders.isNotEmpty) ...[
+                  _buildSectionTitle('Active Orders', hasDot: true),
+                  ...activeOrders.map((o) => _buildActiveOrderCard(o)),
+                ],
+                const SizedBox(height: 25),
+                if (orderHistory.isNotEmpty) ...[
+                  _buildSectionTitle('Order History'),
+                  ...orderHistory.map((o) => _buildHistoryOrderCard(o)),
+                ],
+              ],
+            ),
+          );
+        },
       ),
     );
   }
@@ -83,9 +97,15 @@ class OrdersScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildActiveOrderCard(BuildContext context) {
+  Widget _buildActiveOrderCard(OrderModel order) {
+    String displayId = order.id ?? '';
+    if (displayId.length > 8) {
+      displayId = displayId.substring(0, 8).toUpperCase();
+    }
+
     return Card(
       elevation: 0,
+      margin: const EdgeInsets.only(bottom: 15),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(20),
         side: BorderSide(color: Colors.grey[200]!),
@@ -98,11 +118,11 @@ class OrdersScreen extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Column(
+                Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('ORD-2026-001', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                    Text('Mar 31, 2026 • 2:30 PM', style: TextStyle(color: Colors.grey, fontSize: 11)),
+                    Text('ORD-$displayId', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                    Text(DateFormat('MMM dd, yyyy • h:mm a').format(order.date), style: const TextStyle(color: Colors.grey, fontSize: 11)),
                   ],
                 ),
                 Container(
@@ -111,25 +131,24 @@ class OrdersScreen extends StatelessWidget {
                     color: Colors.red[50],
                     borderRadius: BorderRadius.circular(20),
                   ),
-                  child: const Row(
+                  child: Row(
                     children: [
-                      Icon(Icons.directions_bike, size: 14, color: Colors.red),
-                      SizedBox(width: 4),
-                      Text('On the Way', style: TextStyle(color: Colors.red, fontSize: 11, fontWeight: FontWeight.bold)),
+                      const Icon(Icons.directions_bike, size: 14, color: Colors.red),
+                      const SizedBox(width: 4),
+                      Text(order.status, style: const TextStyle(color: Colors.red, fontSize: 11, fontWeight: FontWeight.bold)),
                     ],
                   ),
                 ),
               ],
             ),
             const SizedBox(height: 20),
-            _buildOrderItem('Tikboy Longganisa Classic', 160, qty: 2),
-            _buildOrderItem('Tikboy Embutido Special', 150, qty: 1),
+            ...order.items.map((item) => _buildOrderItem(item.name, item.price, qty: item.quantity)),
             const Divider(height: 30),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: const [
-                Text('Total', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey)),
-                Text('₱310', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.red, fontSize: 16)),
+              children: [
+                const Text('Total', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey)),
+                Text('₱${order.totalAmount.toInt()}', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.red, fontSize: 16)),
               ],
             ),
             const SizedBox(height: 20),
@@ -141,7 +160,7 @@ class OrdersScreen extends StatelessWidget {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (_) => const TrackOrderScreen(orderId: 'ORD-2026-001'),
+                      builder: (_) => TrackOrderScreen(orderId: order.id ?? ''),
                     ),
                   );
                 },
@@ -161,15 +180,15 @@ class OrdersScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildHistoryOrderCard({
-    required String orderId,
-    required String date,
-    required String status,
-    required Color statusColor,
-    required IconData statusIcon,
-    required List<Map<String, dynamic>> items,
-    required double total,
-  }) {
+  Widget _buildHistoryOrderCard(OrderModel order) {
+    Color statusColor = order.status == 'Delivered' ? Colors.teal : Colors.grey;
+    IconData statusIcon = order.status == 'Delivered' ? Icons.check_circle_outline : Icons.cancel_outlined;
+
+    String displayId = order.id ?? '';
+    if (displayId.length > 8) {
+      displayId = displayId.substring(0, 8).toUpperCase();
+    }
+
     return Card(
       elevation: 0,
       margin: const EdgeInsets.only(bottom: 15),
@@ -188,34 +207,34 @@ class OrdersScreen extends StatelessWidget {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(orderId, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                    Text(date, style: const TextStyle(color: Colors.grey, fontSize: 11)),
+                    Text('ORD-$displayId', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                    Text(DateFormat('MMM dd, yyyy • h:mm a').format(order.date), style: const TextStyle(color: Colors.grey, fontSize: 11)),
                   ],
                 ),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                   decoration: BoxDecoration(
-                    color: statusColor.withOpacity(0.1),
+                    color: statusColor.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Row(
                     children: [
                       Icon(statusIcon, size: 14, color: statusColor),
                       const SizedBox(width: 4),
-                      Text(status, style: TextStyle(color: statusColor, fontSize: 11, fontWeight: FontWeight.bold)),
+                      Text(order.status, style: TextStyle(color: statusColor, fontSize: 11, fontWeight: FontWeight.bold)),
                     ],
                   ),
                 ),
               ],
             ),
             const SizedBox(height: 20),
-            ...items.map((item) => _buildOrderItem(item['name'], item['price'], qty: item['qty'] ?? 1)),
+            ...order.items.map((item) => _buildOrderItem(item.name, item.price, qty: item.quantity)),
             const Divider(height: 30),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 const Text('Total', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey)),
-                Text('₱${total.toInt()}', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.red, fontSize: 16)),
+                Text('₱${order.totalAmount.toInt()}', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.red, fontSize: 16)),
               ],
             ),
             const SizedBox(height: 20),

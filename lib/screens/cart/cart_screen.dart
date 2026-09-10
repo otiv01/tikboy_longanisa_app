@@ -1,9 +1,65 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/cart_provider.dart';
+import '../../providers/auth_provider.dart';
+import '../../services/directus_api_service.dart';
+import '../../models/order_model.dart';
 
-class CartScreen extends StatelessWidget {
+class CartScreen extends StatefulWidget {
   const CartScreen({super.key});
+
+  @override
+  State<CartScreen> createState() => _CartScreenState();
+}
+
+class _CartScreenState extends State<CartScreen> {
+  bool _isOrdering = false;
+
+  Future<void> _placeOrder(BuildContext context, CartProvider cart) async {
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    final apiService = DirectusApiService();
+
+    setState(() => _isOrdering = true);
+
+    try {
+      final order = OrderModel(
+        totalAmount: cart.totalAmount,
+        date: DateTime.now(),
+        items: cart.items.values.map((item) {
+          return OrderItem(
+            productId: item.id,
+            name: item.name,
+            quantity: item.quantity,
+            price: item.price,
+          );
+        }).toList(),
+      );
+
+      await apiService.createOrder(order, auth.accessToken);
+
+      if (mounted) {
+        cart.clearCart();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Order placed successfully! 🎉'), backgroundColor: Colors.green),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        if (e.toString().contains('SESSION_EXPIRED')) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Session expired. Please sign in again.'), backgroundColor: Colors.orange),
+          );
+          auth.logout(); // This will trigger navigation back to login
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+          );
+        }
+      }
+    } finally {
+      if (mounted) setState(() => _isOrdering = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -209,7 +265,7 @@ class CartScreen extends StatelessWidget {
                   borderRadius: BorderRadius.circular(10),
                   child: LinearProgressIndicator(
                     value: progress,
-                    backgroundColor: Colors.red.withOpacity(0.1),
+                    backgroundColor: Colors.red.withValues(alpha: 0.1),
                     valueColor: const AlwaysStoppedAnimation<Color>(Colors.red),
                     minHeight: 6,
                   ),
@@ -247,6 +303,32 @@ class CartScreen extends StatelessWidget {
                 style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.red),
               ),
             ],
+          ),
+          const SizedBox(height: 25),
+          SizedBox(
+            width: double.infinity,
+            height: 55,
+            child: ElevatedButton(
+              onPressed: _isOrdering || cart.items.isEmpty ? null : () => _placeOrder(context, cart),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(15),
+                ),
+                elevation: 0,
+              ),
+              child: _isOrdering
+                  ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                    )
+                  : const Text(
+                      'Place Order',
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    ),
+            ),
           ),
           const SizedBox(height: 20),
         ],

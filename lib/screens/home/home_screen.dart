@@ -39,11 +39,11 @@ class HomeScreen extends StatelessWidget {
                   _buildPromoBanner(),
                   if (bestsellers.isNotEmpty) ...[
                     _buildSectionHeader('Bestsellers', onSeeAll: () {}),
-                    _buildBestsellers(context, bestsellers),
+                    _buildBestsellers(context, bestsellers, apiService.baseUrl),
                   ],
                   _buildSectionHeader('Our Products'),
                   _buildCategories(),
-                  _buildProductGrid(context, products),
+                  _buildProductGrid(context, products, apiService.baseUrl),
                 ],
               ),
             );
@@ -161,7 +161,7 @@ class HomeScreen extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
+              color: Colors.white.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(10),
             ),
             child: const Text(
@@ -220,19 +220,21 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildBestsellers(BuildContext context, List<Product> bestsellers) {
+  Widget _buildBestsellers(BuildContext context, List<Product> bestsellers, String baseUrl) {
     return SizedBox(
       height: 220,
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 15),
         itemCount: bestsellers.length,
-        itemBuilder: (context, index) => _buildBestsellerCard(context, bestsellers[index]),
+        itemBuilder: (context, index) => _buildBestsellerCard(context, bestsellers[index], baseUrl),
       ),
     );
   }
 
-  Widget _buildBestsellerCard(BuildContext context, Product product) {
+  Widget _buildBestsellerCard(BuildContext context, Product product, String baseUrl) {
+    final String imageUrl = product.getFullImageUrl(baseUrl);
+
     return Container(
       width: 160,
       margin: const EdgeInsets.symmetric(horizontal: 5),
@@ -248,8 +250,12 @@ class HomeScreen extends StatelessWidget {
                 color: Colors.grey[200],
                 height: 100,
                 width: double.infinity,
-                child: product.imageUrl != null && product.imageUrl!.isNotEmpty
-                    ? Image.network(product.imageUrl!, fit: BoxFit.cover)
+                child: imageUrl.isNotEmpty
+                    ? Image.network(
+                        imageUrl,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) => const Icon(Icons.broken_image, color: Colors.grey),
+                      )
                     : const Icon(Icons.fastfood, color: Colors.red, size: 40),
               ),
             ),
@@ -319,7 +325,7 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildProductGrid(BuildContext context, List<Product> products) {
+  Widget _buildProductGrid(BuildContext context, List<Product> products, String baseUrl) {
     return Padding(
       padding: const EdgeInsets.all(15.0),
       child: GridView.builder(
@@ -332,15 +338,13 @@ class HomeScreen extends StatelessWidget {
           mainAxisSpacing: 10,
         ),
         itemCount: products.length,
-        itemBuilder: (context, index) => _buildGridCard(context, products[index]),
+        itemBuilder: (context, index) => _buildGridCard(context, products[index], baseUrl),
       ),
     );
   }
 
-  Widget _buildGridCard(BuildContext context, Product product) {
-    final String imageUrl = (product.imageUrl != null && !product.imageUrl!.startsWith('http'))
-        ? 'http://localhost:8055/assets/${product.imageUrl}'
-        : product.imageUrl ?? '';
+  Widget _buildGridCard(BuildContext context, Product product, String baseUrl) {
+    final String imageUrl = product.getFullImageUrl(baseUrl);
 
     return Card(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),

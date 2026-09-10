@@ -24,9 +24,15 @@ class Product {
       name: json['name'] ?? '',
       price: (json['price'] as num).toDouble(),
       category: json['category'] ?? 'General',
-      imageUrl: json['image_url'], // Field name in Directus collection
+      imageUrl: json['image'], // Field name in Directus collection
       isBestseller: json['is_bestseller'] ?? false,
       description: json['description'],
     );
+  }
+
+  String getFullImageUrl(String baseUrl) {
+    if (imageUrl == null || imageUrl!.isEmpty) return '';
+    if (imageUrl!.startsWith('http')) return imageUrl!;
+    return '$baseUrl/assets/$imageUrl';
   }
 }
