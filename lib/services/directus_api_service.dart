@@ -4,7 +4,6 @@ import '../models/product_model.dart';
 import '../models/order_model.dart';
 
 class DirectusApiService {
-  // 📱 Using your correct local Wi-Fi IP address
   final String baseUrl = 'http://192.168.1.19:8055'; 
 
   // 1. Login

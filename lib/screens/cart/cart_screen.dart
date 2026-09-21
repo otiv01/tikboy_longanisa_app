@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/cart_provider.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/address_provider.dart';
 import '../../services/directus_api_service.dart';
 import '../../models/order_model.dart';
+import '../profile/saved_addresses_screen.dart';
 
 class CartScreen extends StatefulWidget {
   const CartScreen({super.key});
@@ -17,7 +19,22 @@ class _CartScreenState extends State<CartScreen> {
 
   Future<void> _placeOrder(BuildContext context, CartProvider cart) async {
     final auth = Provider.of<AuthProvider>(context, listen: false);
+    final addressProvider = Provider.of<AddressProvider>(context, listen: false);
     final apiService = DirectusApiService();
+
+    // Find the default address
+    final defaultAddress = addressProvider.addresses.firstWhere(
+      (a) => a.isDefault,
+      orElse: () => addressProvider.addresses.isNotEmpty ? addressProvider.addresses.first : AddressItem(id: '', label: '', address: ''),
+    );
+
+    if (defaultAddress.address.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please add a delivery address first'), backgroundColor: Colors.orange),
+      );
+      Navigator.push(context, MaterialPageRoute(builder: (_) => const SavedAddressesScreen()));
+      return;
+    }
 
     setState(() => _isOrdering = true);
 
@@ -25,6 +42,7 @@ class _CartScreenState extends State<CartScreen> {
       final order = OrderModel(
         totalAmount: cart.totalAmount,
         date: DateTime.now(),
+        address: defaultAddress.address,
         items: cart.items.values.map((item) {
           return OrderItem(
             productId: item.id,
@@ -49,7 +67,7 @@ class _CartScreenState extends State<CartScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Session expired. Please sign in again.'), backgroundColor: Colors.orange),
           );
-          auth.logout(); // This will trigger navigation back to login
+          auth.logout();
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
@@ -64,8 +82,14 @@ class _CartScreenState extends State<CartScreen> {
   @override
   Widget build(BuildContext context) {
     final cart = Provider.of<CartProvider>(context);
+    final addressProvider = Provider.of<AddressProvider>(context);
     final items = cart.items.values.toList();
     final itemKeys = cart.items.keys.toList();
+
+    final defaultAddress = addressProvider.addresses.firstWhere(
+      (a) => a.isDefault,
+      orElse: () => addressProvider.addresses.isNotEmpty ? addressProvider.addresses.first : AddressItem(id: '', label: 'No Address', address: 'Click to add a delivery address'),
+    );
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -102,16 +126,65 @@ class _CartScreenState extends State<CartScreen> {
       body: cart.items.isEmpty
           ? const Center(child: Text('Your cart is empty'))
           : Column(
-        children: [
-          Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              itemCount: items.length,
-              itemBuilder: (ctx, i) => _buildCartItem(context, cart, itemKeys[i], items[i]),
+              children: [
+                Expanded(
+                  child: ListView.builder(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    itemCount: items.length,
+                    itemBuilder: (ctx, i) => _buildCartItem(context, cart, itemKeys[i], items[i]),
+                  ),
+                ),
+                _buildAddressSection(context, defaultAddress),
+                _buildPromoAndProgress(cart),
+                _buildOrderSummary(cart),
+              ],
             ),
+    );
+  }
+
+  Widget _buildAddressSection(BuildContext context, AddressItem address) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+      padding: const EdgeInsets.all(15),
+      decoration: BoxDecoration(
+        color: Colors.grey[50],
+        borderRadius: BorderRadius.circular(15),
+        border: Border.all(color: Colors.grey[200]!),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text('Delivery Address', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.grey)),
+              GestureDetector(
+                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SavedAddressesScreen())),
+                child: const Text('Change', style: TextStyle(color: Colors.red, fontSize: 12, fontWeight: FontWeight.bold)),
+              ),
+            ],
           ),
-          _buildPromoAndProgress(cart),
-          _buildOrderSummary(cart),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              const Icon(Icons.location_on, color: Colors.red, size: 18),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(address.label, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                    Text(
+                      address.address,
+                      style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ],
       ),
     );
@@ -253,9 +326,7 @@ class _CartScreenState extends State<CartScreen> {
                     const Icon(Icons.delivery_dining, color: Colors.red, size: 20),
                     const SizedBox(width: 10),
                     Text(
-                      remaining > 0
-                          ? 'Add ₱${remaining.toInt()} more for FREE delivery!'
-                          : 'You unlocked FREE delivery!',
+                      remaining > 0 ? 'Add ₱${remaining.toInt()} more for FREE delivery!' : 'You unlocked FREE delivery!',
                       style: const TextStyle(color: Colors.red, fontSize: 12, fontWeight: FontWeight.bold),
                     ),
                   ],

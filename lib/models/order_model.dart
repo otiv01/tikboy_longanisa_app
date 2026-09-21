@@ -6,6 +6,7 @@ class OrderModel {
   final double totalAmount;
   final DateTime date;
   final String status;
+  final String? address;
 
   OrderModel({
     this.id,
@@ -13,12 +14,14 @@ class OrderModel {
     required this.totalAmount,
     required this.date,
     this.status = 'Pending',
+    this.address,
   });
 
   Map<String, dynamic> toJson() {
     return {
       'total': totalAmount,
       'status': status,
+      'address': address,
       'items': items.map((item) => item.toJson()).toList(),
     };
   }
@@ -30,24 +33,25 @@ class OrderModel {
     if (rawItems != null) {
       if (rawItems is List) {
         itemsList = rawItems.map((i) => OrderItem.fromJson(i)).toList();
-      } else if (rawItems is String) {
+      } else if (rawItems is String && rawItems.isNotEmpty) {
         try {
           final decoded = jsonDecode(rawItems);
           if (decoded is List) {
             itemsList = decoded.map((i) => OrderItem.fromJson(i)).toList();
           }
         } catch (e) {
-          // Fallback if JSON string is malformed
+          print('Error decoding items JSON: $e');
         }
       }
     }
 
     return OrderModel(
-      id: json['id'].toString(),
+      id: json['id']?.toString(),
       totalAmount: (json['total'] as num?)?.toDouble() ?? 0.0,
-      status: json['status'] ?? 'Pending',
+      status: json['status']?.toString() ?? 'Pending',
+      address: json['address']?.toString(),
       date: json['date_created'] != null 
-          ? DateTime.parse(json['date_created']) 
+          ? DateTime.parse(json['date_created'].toString()) 
           : DateTime.now(),
       items: itemsList,
     );
@@ -78,8 +82,8 @@ class OrderItem {
   factory OrderItem.fromJson(Map<String, dynamic> json) {
     return OrderItem(
       productId: json['product_id']?.toString(),
-      name: json['product_name'] ?? '',
-      quantity: json['quantity'] ?? 1,
+      name: json['product_name']?.toString() ?? '',
+      quantity: (json['quantity'] as num?)?.toInt() ?? 1,
       price: (json['price'] as num?)?.toDouble() ?? 0.0,
     );
   }

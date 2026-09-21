@@ -2,17 +2,24 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/cart_provider.dart';
 import '../../providers/notification_provider.dart';
+import '../../providers/favorites_provider.dart';
 import '../../services/directus_api_service.dart';
 import '../../models/product_model.dart';
 import '../notifications/notification_screen.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final apiService = DirectusApiService();
+  State<HomeScreen> createState() => _HomeScreenState();
+}
 
+class _HomeScreenState extends State<HomeScreen> {
+  final apiService = DirectusApiService();
+  String _selectedCategory = 'All';
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
@@ -27,8 +34,13 @@ class HomeScreen extends StatelessWidget {
               return const Center(child: Text('No products available'));
             }
 
-            final products = snapshot.data!;
-            final bestsellers = products.where((p) => p.isBestseller).toList();
+            final allProducts = snapshot.data!;
+            final bestsellers = allProducts.where((p) => p.isBestseller).toList();
+            
+            // Apply filtering logic
+            final filteredProducts = _selectedCategory == 'All' 
+                ? allProducts 
+                : allProducts.where((p) => p.category.toLowerCase().contains(_selectedCategory.toLowerCase())).toList();
 
             return SingleChildScrollView(
               child: Column(
@@ -37,13 +49,19 @@ class HomeScreen extends StatelessWidget {
                   _buildHeader(context),
                   _buildSearchBar(),
                   _buildPromoBanner(),
-                  if (bestsellers.isNotEmpty) ...[
+                  if (bestsellers.isNotEmpty && _selectedCategory == 'All') ...[
                     _buildSectionHeader('Bestsellers', onSeeAll: () {}),
                     _buildBestsellers(context, bestsellers, apiService.baseUrl),
                   ],
-                  _buildSectionHeader('Our Products'),
+                  _buildSectionHeader(_selectedCategory == 'All' ? 'Our Products' : '$_selectedCategory Products'),
                   _buildCategories(),
-                  _buildProductGrid(context, products, apiService.baseUrl),
+                  if (filteredProducts.isEmpty)
+                    const Padding(
+                      padding: EdgeInsets.all(40.0),
+                      child: Center(child: Text('No products found in this category')),
+                    )
+                  else
+                    _buildProductGrid(context, filteredProducts, apiService.baseUrl),
                 ],
               ),
             );
@@ -59,15 +77,10 @@ class HomeScreen extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          GestureDetector(
-            onTap: () {
-              // Navigation to profile can be added here
-            },
-            child: CircleAvatar(
-              radius: 22,
-              backgroundColor: Colors.red[50],
-              child: const Icon(Icons.person, color: Colors.red, size: 28),
-            ),
+          CircleAvatar(
+            radius: 22,
+            backgroundColor: Colors.red[50],
+            child: const Icon(Icons.person, color: Colors.red, size: 28),
           ),
           Row(
             children: [
@@ -203,7 +216,7 @@ class HomeScreen extends StatelessWidget {
         children: [
           Row(
             children: [
-              if (title == 'Bestsellers') const Text('🔥 ', style: TextStyle(fontSize: 18)),
+              if (title.contains('Bestsellers')) const Text('🔥 ', style: TextStyle(fontSize: 18)),
               Text(
                 title,
                 style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
@@ -222,7 +235,7 @@ class HomeScreen extends StatelessWidget {
 
   Widget _buildBestsellers(BuildContext context, List<Product> bestsellers, String baseUrl) {
     return SizedBox(
-      height: 220,
+      height: 240,
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 15),
@@ -244,27 +257,54 @@ class HomeScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            ClipRRect(
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(15)),
-              child: Container(
-                color: Colors.grey[200],
-                height: 100,
-                width: double.infinity,
-                child: imageUrl.isNotEmpty
-                    ? Image.network(
-                        imageUrl,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) => const Icon(Icons.broken_image, color: Colors.grey),
-                      )
-                    : const Icon(Icons.fastfood, color: Colors.red, size: 40),
-              ),
+            Stack(
+              children: [
+                ClipRRect(
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(15)),
+                  child: Container(
+                    color: Colors.grey[200],
+                    height: 100,
+                    width: double.infinity,
+                    child: imageUrl.isNotEmpty
+                        ? Image.network(
+                            imageUrl,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) => const Icon(Icons.broken_image, color: Colors.grey),
+                          )
+                        : const Icon(Icons.fastfood, color: Colors.red, size: 40),
+                  ),
+                ),
+                Positioned(
+                  top: 5,
+                  right: 5,
+                  child: Consumer<FavoritesProvider>(
+                    builder: (context, favs, child) {
+                      final isFav = favs.isFavorite(product.id.toString());
+                      return GestureDetector(
+                        onTap: () => favs.toggleFavorite(product.id.toString()),
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+                          child: Icon(
+                            isFav ? Icons.favorite : Icons.favorite_border,
+                            color: Colors.red,
+                            size: 16,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
             ),
             Padding(
               padding: const EdgeInsets.all(10.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(product.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14), maxLines: 1, overflow: TextOverflow.ellipsis),
+                  Text(product.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13), maxLines: 1, overflow: TextOverflow.ellipsis),
+                  if (product.description != null && product.description!.isNotEmpty)
+                    Text(product.description!, style: const TextStyle(color: Colors.grey, fontSize: 10), maxLines: 1),
                   const SizedBox(height: 4),
                   Text('₱${product.price.toInt()}', style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 8),
@@ -295,7 +335,7 @@ class HomeScreen extends StatelessWidget {
   }
 
   Widget _buildCategories() {
-    final categories = ['All', 'Longganisa', 'Embutido', 'Bundle'];
+    final categories = ['All', 'Longganisa', 'Chicken', 'Embutido', 'Condiments'];
     return SizedBox(
       height: 50,
       child: ListView.builder(
@@ -303,20 +343,24 @@ class HomeScreen extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 15),
         itemCount: categories.length,
         itemBuilder: (ctx, i) {
-          final isSelected = i == 0;
-          return Container(
-            margin: const EdgeInsets.symmetric(horizontal: 5, vertical: 8),
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            decoration: BoxDecoration(
-              color: isSelected ? Colors.red : Colors.grey[100],
-              borderRadius: BorderRadius.circular(10),
-            ),
-            alignment: Alignment.center,
-            child: Text(
-              categories[i],
-              style: TextStyle(
-                color: isSelected ? Colors.white : Colors.grey[600],
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+          final category = categories[i];
+          final isSelected = _selectedCategory == category;
+          return GestureDetector(
+            onTap: () => setState(() => _selectedCategory = category),
+            child: Container(
+              margin: const EdgeInsets.symmetric(horizontal: 5, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              decoration: BoxDecoration(
+                color: isSelected ? Colors.red : Colors.grey[100],
+                borderRadius: BorderRadius.circular(10),
+              ),
+              alignment: Alignment.center,
+              child: Text(
+                category,
+                style: TextStyle(
+                  color: isSelected ? Colors.white : Colors.grey[600],
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                ),
               ),
             ),
           );
@@ -333,7 +377,7 @@ class HomeScreen extends StatelessWidget {
         physics: const NeverScrollableScrollPhysics(),
         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: 2,
-          childAspectRatio: 0.75,
+          childAspectRatio: 0.68,
           crossAxisSpacing: 10,
           mainAxisSpacing: 10,
         ),
@@ -347,17 +391,18 @@ class HomeScreen extends StatelessWidget {
     final String imageUrl = product.getFullImageUrl(baseUrl);
 
     return Card(
+      elevation: 1,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-      child: Stack(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          Stack(
             children: [
               ClipRRect(
                 borderRadius: const BorderRadius.vertical(top: Radius.circular(15)),
                 child: Container(
                   color: Colors.grey[200],
-                  height: 120,
+                  height: 110,
                   width: double.infinity,
                   child: imageUrl.isNotEmpty
                       ? Image.network(
@@ -365,57 +410,83 @@ class HomeScreen extends StatelessWidget {
                           fit: BoxFit.cover,
                           errorBuilder: (context, error, stackTrace) => const Icon(Icons.broken_image, color: Colors.grey),
                         )
-                      : const Icon(Icons.fastfood, color: Colors.red, size: 50),
+                      : const Icon(Icons.fastfood, color: Colors.red, size: 40),
                 ),
               ),
-              Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(product.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                    const Text('per pack (6 pcs)', style: TextStyle(color: Colors.grey, fontSize: 10)),
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        const Icon(Icons.star, color: Colors.orange, size: 12),
-                        const SizedBox(width: 2),
-                        const Text('4.8', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
-                        Text(' (120)', style: const TextStyle(color: Colors.grey, fontSize: 10)),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Text('₱${product.price.toInt()}', style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 14)),
-                  ],
+              if (product.isBestseller)
+                Positioned(
+                  top: 8,
+                  left: 8,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(color: Colors.red, borderRadius: BorderRadius.circular(4)),
+                    child: const Text('BESTSELLER', style: TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold)),
+                  ),
+                ),
+              Positioned(
+                top: 5,
+                right: 5,
+                child: Consumer<FavoritesProvider>(
+                  builder: (context, favs, child) {
+                    final isFav = favs.isFavorite(product.id.toString());
+                    return GestureDetector(
+                      onTap: () => favs.toggleFavorite(product.id.toString()),
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+                        child: Icon(
+                          isFav ? Icons.favorite : Icons.favorite_border,
+                          color: Colors.red,
+                          size: 16,
+                        ),
+                      ),
+                    );
+                  },
                 ),
               ),
             ],
           ),
-          Positioned(
-            bottom: 8,
-            right: 8,
-            child: GestureDetector(
-              onTap: () {
-                Provider.of<CartProvider>(context, listen: false).addItem(product.id.toString(), product.name, product.price);
-                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${product.name} added to cart'), duration: const Duration(milliseconds: 500)));
-              },
-              child: Container(
-                padding: const EdgeInsets.all(4),
-                decoration: BoxDecoration(color: Colors.red[50], shape: BoxShape.circle),
-                child: const Icon(Icons.add, color: Colors.red, size: 20),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    product.name,
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  if (product.description != null && product.description!.isNotEmpty)
+                    Text(
+                      product.description!,
+                      style: const TextStyle(color: Colors.grey, fontSize: 10),
+                      maxLines: 1,
+                    ),
+                  const Spacer(),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text('₱${product.price.toInt()}', style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 14)),
+                      GestureDetector(
+                        onTap: () {
+                          Provider.of<CartProvider>(context, listen: false).addItem(product.id.toString(), product.name, product.price);
+                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${product.name} added to cart'), duration: const Duration(milliseconds: 500)));
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: BoxDecoration(color: Colors.red[50], shape: BoxShape.circle),
+                          child: const Icon(Icons.add, color: Colors.red, size: 20),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ),
           ),
-          if (product.isBestseller)
-            Positioned(
-              top: 8,
-              left: 8,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(color: Colors.red, borderRadius: BorderRadius.circular(4)),
-                child: const Text('BESTSELLER', style: TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold)),
-              ),
-            ),
         ],
       ),
     );

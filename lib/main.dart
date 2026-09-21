@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 import 'providers/auth_provider.dart';
 import 'providers/cart_provider.dart';
 import 'providers/notification_provider.dart';
+import 'providers/favorites_provider.dart';
+import 'providers/address_provider.dart';
 import 'main_navigation.dart';
 
 void main() {
@@ -12,6 +14,8 @@ void main() {
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => CartProvider()),
         ChangeNotifierProvider(create: (_) => NotificationProvider()),
+        ChangeNotifierProvider(create: (_) => FavoritesProvider()),
+        ChangeNotifierProvider(create: (_) => AddressProvider()),
       ],
       child: const TikboyApp(),
     ),

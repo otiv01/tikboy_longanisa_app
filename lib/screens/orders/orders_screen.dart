@@ -143,6 +143,23 @@ class _OrdersScreenState extends State<OrdersScreen> {
             ),
             const SizedBox(height: 20),
             ...order.items.map((item) => _buildOrderItem(item.name, item.price, qty: item.quantity)),
+            if (order.address != null && order.address!.isNotEmpty) ...[
+              const Divider(height: 30),
+              Row(
+                children: [
+                  const Icon(Icons.location_on_outlined, size: 14, color: Colors.grey),
+                  const SizedBox(width: 4),
+                  Expanded(
+                    child: Text(
+                      order.address!,
+                      style: const TextStyle(color: Colors.grey, fontSize: 11),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+            ],
             const Divider(height: 30),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -229,6 +246,23 @@ class _OrdersScreenState extends State<OrdersScreen> {
             ),
             const SizedBox(height: 20),
             ...order.items.map((item) => _buildOrderItem(item.name, item.price, qty: item.quantity)),
+            if (order.address != null && order.address!.isNotEmpty) ...[
+              const Divider(height: 30),
+              Row(
+                children: [
+                  const Icon(Icons.location_on_outlined, size: 14, color: Colors.grey),
+                  const SizedBox(width: 4),
+                  Expanded(
+                    child: Text(
+                      order.address!,
+                      style: const TextStyle(color: Colors.grey, fontSize: 11),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+            ],
             const Divider(height: 30),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,

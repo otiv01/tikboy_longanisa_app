@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/cart_provider.dart';
+import '../../providers/favorites_provider.dart';
+import '../../services/directus_api_service.dart';
+import '../../models/product_model.dart';
 
 class FavoritesScreen extends StatefulWidget {
   const FavoritesScreen({super.key});
@@ -10,41 +13,7 @@ class FavoritesScreen extends StatefulWidget {
 }
 
 class _FavoritesScreenState extends State<FavoritesScreen> {
-  final List<Map<String, dynamic>> _favoriteProducts = [
-    {
-      'id': 'p1',
-      'name': 'Longganisa Classic',
-      'price': 80.0,
-      'rating': '4.8',
-      'reviews': '124',
-      'isFavorite': true,
-    },
-    {
-      'id': 'p2',
-      'name': 'Longganisa Sweet',
-      'price': 85.0,
-      'rating': '4.9',
-      'reviews': '45',
-      'isFavorite': true,
-    },
-    {
-      'id': 'p3',
-      'name': 'Embutido Special',
-      'price': 150.0,
-      'rating': '4.7',
-      'reviews': '89',
-      'isFavorite': true,
-    },
-  ];
-
-  void _removeFavorite(int index) {
-    setState(() {
-      _favoriteProducts.removeAt(index);
-    });
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Removed from favorites'), duration: Duration(seconds: 1)),
-    );
-  }
+  final apiService = DirectusApiService();
 
   @override
   Widget build(BuildContext context) {
@@ -56,22 +25,36 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
         elevation: 0,
         foregroundColor: Colors.black,
       ),
-      body: _favoriteProducts.isEmpty
-          ? _buildEmptyState()
-          : GridView.builder(
-              padding: const EdgeInsets.all(20),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                childAspectRatio: 0.7,
-                crossAxisSpacing: 15,
-                mainAxisSpacing: 15,
-              ),
-              itemCount: _favoriteProducts.length,
-              itemBuilder: (context, index) {
-                final product = _favoriteProducts[index];
-                return _buildFavoriteCard(context, index, product);
-              },
+      body: FutureBuilder<List<Product>>(
+        future: apiService.fetchProducts(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          final favProvider = context.watch<FavoritesProvider>();
+          final allProducts = snapshot.data ?? [];
+          final favoriteProducts = allProducts.where((p) => favProvider.isFavorite(p.id.toString())).toList();
+
+          if (favoriteProducts.isEmpty) {
+            return _buildEmptyState();
+          }
+
+          return GridView.builder(
+            padding: const EdgeInsets.all(20),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              childAspectRatio: 0.68,
+              crossAxisSpacing: 15,
+              mainAxisSpacing: 15,
             ),
+            itemCount: favoriteProducts.length,
+            itemBuilder: (context, index) {
+              return _buildFavoriteCard(context, favoriteProducts[index]);
+            },
+          );
+        },
+      ),
     );
   }
 
@@ -82,18 +65,20 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
         children: [
           Icon(Icons.favorite_border, size: 80, color: Colors.grey[200]),
           const SizedBox(height: 16),
-          Text('No favorites yet', style: TextStyle(color: Colors.grey[400])),
+          const Text('No favorites yet', style: TextStyle(color: Colors.grey)),
           const SizedBox(height: 8),
-          Text('Start liking products to see them here!', style: TextStyle(color: Colors.grey[300], fontSize: 12)),
+          const Text('Start liking products to see them here!', style: TextStyle(color: Colors.grey, fontSize: 12)),
         ],
       ),
     );
   }
 
-  Widget _buildFavoriteCard(BuildContext context, int index, Map<String, dynamic> product) {
+  Widget _buildFavoriteCard(BuildContext context, Product product) {
+    final String imageUrl = product.getFullImageUrl(apiService.baseUrl);
+
     return Card(
+      elevation: 1,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      elevation: 2,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -102,17 +87,23 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
               ClipRRect(
                 borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
                 child: Container(
-                  height: 120,
+                  height: 110,
                   width: double.infinity,
                   color: Colors.grey[100],
-                  child: const Icon(Icons.fastfood, color: Colors.red, size: 40),
+                  child: imageUrl.isNotEmpty
+                      ? Image.network(
+                          imageUrl,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) => const Icon(Icons.broken_image, color: Colors.grey),
+                        )
+                      : const Icon(Icons.fastfood, color: Colors.red, size: 40),
                 ),
               ),
               Positioned(
                 top: 8,
                 right: 8,
                 child: GestureDetector(
-                  onTap: () => _removeFavorite(index),
+                  onTap: () => context.read<FavoritesProvider>().toggleFavorite(product.id.toString()),
                   child: Container(
                     padding: const EdgeInsets.all(6),
                     decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
@@ -122,57 +113,52 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
               ),
             ],
           ),
-          Padding(
-            padding: const EdgeInsets.all(12.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  product['name'],
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 4),
-                Row(
-                  children: [
-                    const Icon(Icons.star, color: Colors.orange, size: 12),
-                    const SizedBox(width: 2),
-                    Text(product['rating'], style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
-                    Text(' (${product['reviews']})', style: const TextStyle(color: Colors.grey, fontSize: 10)),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      '₱${product['price'].toInt()}',
-                      style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 15),
-                    ),
-                    GestureDetector(
-                      onTap: () {
-                        context.read<CartProvider>().addItem(
-                              product['id'],
-                              product['name'],
-                              product['price'],
-                            );
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text('${product['name']} added to cart'),
-                            duration: const Duration(milliseconds: 500),
-                          ),
-                        );
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.all(4),
-                        decoration: BoxDecoration(color: Colors.red[50], shape: BoxShape.circle),
-                        child: const Icon(Icons.add, color: Colors.red, size: 20),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.all(12.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    product.name,
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  if (product.description != null && product.description!.isNotEmpty)
+                    Text(product.description!, style: const TextStyle(color: Colors.grey, fontSize: 10), maxLines: 1),
+                  const Spacer(),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        '₱${product.price.toInt()}',
+                        style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 15),
                       ),
-                    ),
-                  ],
-                ),
-              ],
+                      GestureDetector(
+                        onTap: () {
+                          context.read<CartProvider>().addItem(
+                                product.id.toString(),
+                                product.name,
+                                product.price,
+                              );
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('${product.name} added to cart'),
+                              duration: const Duration(milliseconds: 500),
+                            ),
+                          );
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: BoxDecoration(color: Colors.red[50], shape: BoxShape.circle),
+                          child: const Icon(Icons.add, color: Colors.red, size: 20),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
         ],

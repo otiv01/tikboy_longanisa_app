@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'chatbot_screen.dart';
 
 class HelpSupportScreen extends StatelessWidget {
   const HelpSupportScreen({super.key});
@@ -40,7 +41,16 @@ class HelpSupportScreen extends StatelessWidget {
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 15),
-            _buildContactCard(Icons.chat_bubble_outline, 'Live Chat', 'Chat with our support team', Colors.blue),
+            _buildContactCard(
+              Icons.chat_bubble_outline,
+              'Live Chat',
+              'Chat with our support bot',
+              Colors.blue,
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const ChatbotScreen()),
+              ),
+            ),
             _buildContactCard(Icons.email_outlined, 'Email', 'support@tikboy.com', Colors.orange),
             _buildContactCard(Icons.phone_outlined, 'Phone', '+63 912 345 6789', Colors.green),
             const SizedBox(height: 40),
@@ -84,34 +94,38 @@ class HelpSupportScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildContactCard(IconData icon, String title, String subtitle, Color color) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 15),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(15),
-        border: Border.all(color: Colors.grey[200]!),
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(color: color.withOpacity(0.1), shape: BoxShape.circle),
-            child: Icon(icon, color: color, size: 24),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                Text(subtitle, style: TextStyle(color: Colors.grey[600], fontSize: 14)),
-              ],
+  Widget _buildContactCard(IconData icon, String title, String subtitle, Color color, {VoidCallback? onTap}) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(15),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 15),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(15),
+          border: Border.all(color: Colors.grey[200]!),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(color: color.withValues(alpha: 0.1), shape: BoxShape.circle),
+              child: Icon(icon, color: color, size: 24),
             ),
-          ),
-          Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey[400]),
-        ],
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                  Text(subtitle, style: TextStyle(color: Colors.grey[600], fontSize: 14)),
+                ],
+              ),
+            ),
+            Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey[400]),
+          ],
+        ),
       ),
     );
   }

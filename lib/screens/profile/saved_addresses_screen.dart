@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../providers/address_provider.dart';
 
 class SavedAddressesScreen extends StatefulWidget {
   const SavedAddressesScreen({super.key});
@@ -8,34 +10,58 @@ class SavedAddressesScreen extends StatefulWidget {
 }
 
 class _SavedAddressesScreenState extends State<SavedAddressesScreen> {
-  final List<Map<String, dynamic>> _addresses = [
-    {
-      'id': '1',
-      'label': 'Home',
-      'address': '123 Rizal St., Brgy. San San, Lucban, Quezon',
-      'isDefault': true,
-      'icon': Icons.home_outlined,
-    },
-    {
-      'id': '2',
-      'label': 'Work',
-      'address': 'Tikboy Main Office, 456 Quezon Ave, Lucena City',
-      'isDefault': false,
-      'icon': Icons.work_outline,
-    },
-  ];
+  final _labelController = TextEditingController();
+  final _addressController = TextEditingController();
 
-  void _deleteAddress(int index) {
-    setState(() {
-      _addresses.removeAt(index);
-    });
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Address deleted')),
+  void _showAddAddressDialog() {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Add New Address'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: _labelController,
+              decoration: const InputDecoration(labelText: 'Label (e.g. Home, Work)'),
+            ),
+            const SizedBox(height: 10),
+            TextField(
+              controller: _addressController,
+              decoration: const InputDecoration(labelText: 'Complete Address'),
+              maxLines: 2,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              if (_labelController.text.isNotEmpty && _addressController.text.isNotEmpty) {
+                context.read<AddressProvider>().addAddress(
+                  _labelController.text,
+                  _addressController.text,
+                );
+                _labelController.clear();
+                _addressController.clear();
+                Navigator.pop(ctx);
+              }
+            },
+            child: const Text('Add'),
+          ),
+        ],
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final addressProvider = context.watch<AddressProvider>();
+    final addresses = addressProvider.addresses;
+
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -47,14 +73,13 @@ class _SavedAddressesScreenState extends State<SavedAddressesScreen> {
       body: Column(
         children: [
           Expanded(
-            child: _addresses.isEmpty
+            child: addresses.isEmpty
                 ? _buildEmptyState()
                 : ListView.builder(
                     padding: const EdgeInsets.all(20),
-                    itemCount: _addresses.length,
+                    itemCount: addresses.length,
                     itemBuilder: (context, index) {
-                      final address = _addresses[index];
-                      return _buildAddressCard(index, address);
+                      return _buildAddressCard(addresses[index]);
                     },
                   ),
           ),
@@ -77,7 +102,7 @@ class _SavedAddressesScreenState extends State<SavedAddressesScreen> {
     );
   }
 
-  Widget _buildAddressCard(int index, Map<String, dynamic> address) {
+  Widget _buildAddressCard(AddressItem address) {
     return Container(
       margin: const EdgeInsets.only(bottom: 15),
       padding: const EdgeInsets.all(16),
@@ -85,8 +110,8 @@ class _SavedAddressesScreenState extends State<SavedAddressesScreen> {
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: address['isDefault'] ? Colors.red : Colors.grey[200]!,
-          width: address['isDefault'] ? 1.5 : 1,
+          color: address.isDefault ? Colors.red : Colors.grey[200]!,
+          width: address.isDefault ? 1.5 : 1,
         ),
       ),
       child: Column(
@@ -99,7 +124,12 @@ class _SavedAddressesScreenState extends State<SavedAddressesScreen> {
                   color: Colors.red[50],
                   shape: BoxShape.circle,
                 ),
-                child: Icon(address['icon'], color: Colors.red, size: 20),
+                child: Icon(
+                  address.label.toLowerCase() == 'home' ? Icons.home_outlined : 
+                  address.label.toLowerCase() == 'work' ? Icons.work_outline : Icons.location_on_outlined, 
+                  color: Colors.red, 
+                  size: 20
+                ),
               ),
               const SizedBox(width: 16),
               Expanded(
@@ -109,10 +139,10 @@ class _SavedAddressesScreenState extends State<SavedAddressesScreen> {
                     Row(
                       children: [
                         Text(
-                          address['label'],
+                          address.label,
                           style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                         ),
-                        if (address['isDefault']) ...[
+                        if (address.isDefault) ...[
                           const SizedBox(width: 8),
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
@@ -130,7 +160,7 @@ class _SavedAddressesScreenState extends State<SavedAddressesScreen> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      address['address'],
+                      address.address,
                       style: TextStyle(color: Colors.grey[600], fontSize: 13),
                     ),
                   ],
@@ -142,15 +172,14 @@ class _SavedAddressesScreenState extends State<SavedAddressesScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
+              if (!address.isDefault)
+                TextButton(
+                  onPressed: () => context.read<AddressProvider>().setDefault(address.id),
+                  child: const Text('Set as Default', style: TextStyle(fontSize: 12, color: Colors.blue)),
+                ),
+              const Spacer(),
               TextButton.icon(
-                onPressed: () {},
-                icon: const Icon(Icons.edit_outlined, size: 16),
-                label: const Text('Edit', style: TextStyle(fontSize: 12)),
-                style: TextButton.styleFrom(foregroundColor: Colors.grey[600]),
-              ),
-              const SizedBox(width: 8),
-              TextButton.icon(
-                onPressed: () => _deleteAddress(index),
+                onPressed: () => context.read<AddressProvider>().deleteAddress(address.id),
                 icon: const Icon(Icons.delete_outline, size: 16),
                 label: const Text('Delete', style: TextStyle(fontSize: 12)),
                 style: TextButton.styleFrom(foregroundColor: Colors.red[400]),
@@ -169,7 +198,7 @@ class _SavedAddressesScreenState extends State<SavedAddressesScreen> {
         width: double.infinity,
         height: 55,
         child: ElevatedButton.icon(
-          onPressed: () {},
+          onPressed: _showAddAddressDialog,
           icon: const Icon(Icons.add_location_alt_outlined),
           label: const Text('Add New Address', style: TextStyle(fontWeight: FontWeight.bold)),
           style: ElevatedButton.styleFrom(
