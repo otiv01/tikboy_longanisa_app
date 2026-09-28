@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../providers/cart_provider.dart';
 import '../../providers/notification_provider.dart';
 import '../../providers/favorites_provider.dart';
 import '../../services/directus_api_service.dart';
 import '../../models/product_model.dart';
 import '../notifications/notification_screen.dart';
+import '../../widgets/product_options_bottom_sheet.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -17,6 +17,18 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final apiService = DirectusApiService();
   String _selectedCategory = 'All';
+
+  void _showProductOptions(BuildContext context, Product product, String baseUrl) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => ProductOptionsBottomSheet(
+        product: product,
+        baseUrl: baseUrl,
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -248,87 +260,87 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildBestsellerCard(BuildContext context, Product product, String baseUrl) {
     final String imageUrl = product.getFullImageUrl(baseUrl);
 
-    return Container(
-      width: 160,
-      margin: const EdgeInsets.symmetric(horizontal: 5),
-      child: Card(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-        elevation: 2,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Stack(
-              children: [
-                ClipRRect(
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(15)),
-                  child: Container(
-                    color: Colors.grey[200],
-                    height: 100,
-                    width: double.infinity,
-                    child: imageUrl.isNotEmpty
-                        ? Image.network(
-                            imageUrl,
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) => const Icon(Icons.broken_image, color: Colors.grey),
-                          )
-                        : const Icon(Icons.fastfood, color: Colors.red, size: 40),
-                  ),
-                ),
-                Positioned(
-                  top: 5,
-                  right: 5,
-                  child: Consumer<FavoritesProvider>(
-                    builder: (context, favs, child) {
-                      final isFav = favs.isFavorite(product.id.toString());
-                      return GestureDetector(
-                        onTap: () => favs.toggleFavorite(product.id.toString()),
-                        child: Container(
-                          padding: const EdgeInsets.all(4),
-                          decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
-                          child: Icon(
-                            isFav ? Icons.favorite : Icons.favorite_border,
-                            color: Colors.red,
-                            size: 16,
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              ],
-            ),
-            Padding(
-              padding: const EdgeInsets.all(10.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+    return GestureDetector(
+      onTap: () => _showProductOptions(context, product, baseUrl),
+      child: Container(
+        width: 160,
+        margin: const EdgeInsets.symmetric(horizontal: 5),
+        child: Card(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+          elevation: 2,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Stack(
                 children: [
-                  Text(product.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13), maxLines: 1, overflow: TextOverflow.ellipsis),
-                  if (product.description != null && product.description!.isNotEmpty)
-                    Text(product.description!, style: const TextStyle(color: Colors.grey, fontSize: 10), maxLines: 1),
-                  const SizedBox(height: 4),
-                  Text('₱${product.price.toInt()}', style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 8),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 30,
-                    child: ElevatedButton(
-                      onPressed: () {
-                        Provider.of<CartProvider>(context, listen: false).addItem(product.id.toString(), product.name, product.price);
-                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${product.name} added to cart'), duration: const Duration(milliseconds: 500)));
+                  ClipRRect(
+                    borderRadius: const BorderRadius.vertical(top: Radius.circular(15)),
+                    child: Container(
+                      color: Colors.grey[200],
+                      height: 100,
+                      width: double.infinity,
+                      child: imageUrl.isNotEmpty
+                          ? Image.network(
+                              imageUrl,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) => const Icon(Icons.broken_image, color: Colors.grey),
+                            )
+                          : const Icon(Icons.fastfood, color: Colors.red, size: 40),
+                    ),
+                  ),
+                  Positioned(
+                    top: 5,
+                    right: 5,
+                    child: Consumer<FavoritesProvider>(
+                      builder: (context, favs, child) {
+                        final isFav = favs.isFavorite(product.id.toString());
+                        return GestureDetector(
+                          onTap: () => favs.toggleFavorite(product.id.toString()),
+                          child: Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+                            child: Icon(
+                              isFav ? Icons.favorite : Icons.favorite_border,
+                              color: Colors.red,
+                              size: 16,
+                            ),
+                          ),
+                        );
                       },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.red,
-                        foregroundColor: Colors.white,
-                        padding: EdgeInsets.zero,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                      ),
-                      child: const Text('+ Add', style: TextStyle(fontSize: 12)),
                     ),
                   ),
                 ],
               ),
-            ),
-          ],
+              Padding(
+                padding: const EdgeInsets.all(10.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(product.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13), maxLines: 1, overflow: TextOverflow.ellipsis),
+                    if (product.description != null && product.description!.isNotEmpty)
+                      Text(product.description!, style: const TextStyle(color: Colors.grey, fontSize: 10), maxLines: 1),
+                    const SizedBox(height: 4),
+                    Text('₱${product.price.toInt()}', style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 30,
+                      child: ElevatedButton(
+                        onPressed: () => _showProductOptions(context, product, baseUrl),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.red,
+                          foregroundColor: Colors.white,
+                          padding: EdgeInsets.zero,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        ),
+                        child: const Text('+ Add', style: TextStyle(fontSize: 12)),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -390,104 +402,104 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildGridCard(BuildContext context, Product product, String baseUrl) {
     final String imageUrl = product.getFullImageUrl(baseUrl);
 
-    return Card(
-      elevation: 1,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Stack(
-            children: [
-              ClipRRect(
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(15)),
-                child: Container(
-                  color: Colors.grey[200],
-                  height: 110,
-                  width: double.infinity,
-                  child: imageUrl.isNotEmpty
-                      ? Image.network(
-                          imageUrl,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) => const Icon(Icons.broken_image, color: Colors.grey),
-                        )
-                      : const Icon(Icons.fastfood, color: Colors.red, size: 40),
-                ),
-              ),
-              if (product.isBestseller)
-                Positioned(
-                  top: 8,
-                  left: 8,
+    return GestureDetector(
+      onTap: () => _showProductOptions(context, product, baseUrl),
+      child: Card(
+        elevation: 1,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Stack(
+              children: [
+                ClipRRect(
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(15)),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                    decoration: BoxDecoration(color: Colors.red, borderRadius: BorderRadius.circular(4)),
-                    child: const Text('BESTSELLER', style: TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold)),
+                    color: Colors.grey[200],
+                    height: 110,
+                    width: double.infinity,
+                    child: imageUrl.isNotEmpty
+                        ? Image.network(
+                            imageUrl,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) => const Icon(Icons.broken_image, color: Colors.grey),
+                          )
+                        : const Icon(Icons.fastfood, color: Colors.red, size: 40),
                   ),
                 ),
-              Positioned(
-                top: 5,
-                right: 5,
-                child: Consumer<FavoritesProvider>(
-                  builder: (context, favs, child) {
-                    final isFav = favs.isFavorite(product.id.toString());
-                    return GestureDetector(
-                      onTap: () => favs.toggleFavorite(product.id.toString()),
-                      child: Container(
-                        padding: const EdgeInsets.all(4),
-                        decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
-                        child: Icon(
-                          isFav ? Icons.favorite : Icons.favorite_border,
-                          color: Colors.red,
-                          size: 16,
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ),
-            ],
-          ),
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    product.name,
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  if (product.description != null && product.description!.isNotEmpty)
-                    Text(
-                      product.description!,
-                      style: const TextStyle(color: Colors.grey, fontSize: 10),
-                      maxLines: 1,
+                if (product.isBestseller)
+                  Positioned(
+                    top: 8,
+                    left: 8,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(color: Colors.red, borderRadius: BorderRadius.circular(4)),
+                      child: const Text('BESTSELLER', style: TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold)),
                     ),
-                  const Spacer(),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Text('₱${product.price.toInt()}', style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 14)),
-                      GestureDetector(
-                        onTap: () {
-                          Provider.of<CartProvider>(context, listen: false).addItem(product.id.toString(), product.name, product.price);
-                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${product.name} added to cart'), duration: const Duration(milliseconds: 500)));
-                        },
+                  ),
+                Positioned(
+                  top: 5,
+                  right: 5,
+                  child: Consumer<FavoritesProvider>(
+                    builder: (context, favs, child) {
+                      final isFav = favs.isFavorite(product.id.toString());
+                      return GestureDetector(
+                        onTap: () => favs.toggleFavorite(product.id.toString()),
                         child: Container(
                           padding: const EdgeInsets.all(4),
-                          decoration: BoxDecoration(color: Colors.red[50], shape: BoxShape.circle),
-                          child: const Icon(Icons.add, color: Colors.red, size: 20),
+                          decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+                          child: Icon(
+                            isFav ? Icons.favorite : Icons.favorite_border,
+                            color: Colors.red,
+                            size: 16,
+                          ),
                         ),
-                      ),
-                    ],
+                      );
+                    },
                   ),
-                ],
+                ),
+              ],
+            ),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      product.name,
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    if (product.description != null && product.description!.isNotEmpty)
+                      Text(
+                        product.description!,
+                        style: const TextStyle(color: Colors.grey, fontSize: 10),
+                        maxLines: 1,
+                      ),
+                    const Spacer(),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text('₱${product.price.toInt()}', style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 14)),
+                        GestureDetector(
+                          onTap: () => _showProductOptions(context, product, baseUrl),
+                          child: Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: BoxDecoration(color: Colors.red[50], shape: BoxShape.circle),
+                            child: const Icon(Icons.add, color: Colors.red, size: 20),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

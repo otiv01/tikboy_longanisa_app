@@ -38,7 +38,7 @@ class CartProvider with ChangeNotifier {
 
   double get totalAmount => subtotal + deliveryFee;
 
-  void addItem(String productId, String name, double price) {
+  void addItem(String productId, String name, double price, {int quantity = 1}) {
     if (_items.containsKey(productId)) {
       _items.update(
         productId,
@@ -46,13 +46,13 @@ class CartProvider with ChangeNotifier {
           id: existing.id,
           name: existing.name,
           price: existing.price,
-          quantity: existing.quantity + 1,
+          quantity: existing.quantity + quantity,
         ),
       );
     } else {
       _items.putIfAbsent(
         productId,
-            () => CartItem(id: productId, name: name, price: price),
+            () => CartItem(id: productId, name: name, price: price, quantity: quantity),
       );
     }
     notifyListeners();

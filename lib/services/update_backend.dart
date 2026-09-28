@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 void main() async {
-  const String baseUrl = 'http://192.168.1.19:8055';
+  const String baseUrl = 'http://192.168.1.77:8055';
   
   // 🔑 IF YOU HAVE A STATIC TOKEN, PASTE IT HERE:
   const String staticToken = ''; 

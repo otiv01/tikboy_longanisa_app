@@ -1,4 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:intl/intl.dart';
+import '../../models/order_model.dart';
+import '../../services/directus_api_service.dart';
+import '../../providers/auth_provider.dart';
 
 class OrderHistoryScreen extends StatefulWidget {
   const OrderHistoryScreen({super.key});
@@ -8,95 +13,19 @@ class OrderHistoryScreen extends StatefulWidget {
 }
 
 class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
-  final List<Map<String, dynamic>> _orders = [
-    {
-      'orderId': 'ORD-2026-002',
-      'date': 'Mar 28, 2026',
-      'status': 'Delivered',
-      'total': 300.0,
-      'items': 'Tikboy Classic Breakfast Bundle',
-      'color': Colors.teal,
-    },
-    {
-      'orderId': 'ORD-2026-003',
-      'date': 'Mar 25, 2026',
-      'status': 'Delivered',
-      'total': 380.0,
-      'items': 'Tikboy Longganisa Sweet (3x), Spicy (1x)',
-      'color': Colors.teal,
-    },
-    {
-      'orderId': 'ORD-2026-004',
-      'date': 'Mar 20, 2026',
-      'status': 'Cancelled',
-      'total': 280.0,
-      'items': 'Tikboy Embutido Regular (2x)',
-      'color': Colors.grey,
-    },
-    {
-      'orderId': 'ORD-2026-005',
-      'date': 'Mar 15, 2026',
-      'status': 'Delivered',
-      'total': 450.0,
-      'items': 'Family Pack Bundle',
-      'color': Colors.teal,
-    },
-  ];
+  late Future<List<OrderModel>> _ordersFuture;
+  final apiService = DirectusApiService();
+  String _searchQuery = '';
 
-  void _deleteOrder(int index) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Delete History'),
-        content: const Text('Are you sure you want to remove this order from your history?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () {
-              setState(() {
-                _orders.removeAt(index);
-              });
-              Navigator.pop(ctx);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Order removed from history')),
-              );
-            },
-            child: const Text('Delete', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
-    );
+  @override
+  void initState() {
+    super.initState();
+    _refreshOrders();
   }
 
-  void _deleteAllOrders() {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Clear All History'),
-        content: const Text('This will permanently delete all your order history. Are you sure?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () {
-              setState(() {
-                _orders.clear();
-              });
-              Navigator.pop(ctx);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('All order history cleared')),
-              );
-            },
-            child: const Text('Clear All', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
-    );
+  void _refreshOrders() {
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    _ordersFuture = apiService.fetchOrders(auth.accessToken);
   }
 
   @override
@@ -109,14 +38,9 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
         elevation: 0,
         foregroundColor: Colors.black,
         actions: [
-          if (_orders.isNotEmpty)
-            TextButton(
-              onPressed: _deleteAllOrders,
-              child: const Text('Clear All', style: TextStyle(color: Colors.redAccent, fontSize: 13)),
-            ),
           IconButton(
-            icon: const Icon(Icons.filter_list),
-            onPressed: () {},
+            icon: const Icon(Icons.refresh, color: Colors.grey),
+            onPressed: () => setState(() => _refreshOrders()),
           ),
         ],
       ),
@@ -124,24 +48,36 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
         children: [
           _buildSearchBox(),
           Expanded(
-            child: _orders.isEmpty
-                ? _buildEmptyState()
-                : ListView.builder(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    itemCount: _orders.length,
-                    itemBuilder: (context, index) {
-                      final order = _orders[index];
-                      return _buildHistoryCard(
-                        index: index,
-                        orderId: order['orderId'],
-                        date: order['date'],
-                        status: order['status'],
-                        total: order['total'],
-                        items: order['items'],
-                        color: order['color'],
-                      );
-                    },
-                  ),
+            child: FutureBuilder<List<OrderModel>>(
+              future: _ordersFuture,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                } else if (snapshot.hasError) {
+                  return Center(child: Text('Error: ${snapshot.error}'));
+                } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                  return _buildEmptyState();
+                }
+
+                final orders = snapshot.data!.where((o) {
+                  if (_searchQuery.isEmpty) return true;
+                  final idStr = (o.id ?? '').toLowerCase();
+                  return idStr.contains(_searchQuery.toLowerCase());
+                }).toList();
+
+                if (orders.isEmpty) {
+                  return _buildEmptyState();
+                }
+
+                return ListView.builder(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  itemCount: orders.length,
+                  itemBuilder: (context, index) {
+                    return _buildHistoryCard(context, orders[index]);
+                  },
+                );
+              },
+            ),
           ),
         ],
       ),
@@ -165,6 +101,7 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
     return Padding(
       padding: const EdgeInsets.all(20.0),
       child: TextField(
+        onChanged: (val) => setState(() => _searchQuery = val),
         decoration: InputDecoration(
           hintText: 'Search by Order ID...',
           prefixIcon: const Icon(Icons.search, color: Colors.grey),
@@ -179,15 +116,21 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
     );
   }
 
-  Widget _buildHistoryCard({
-    required int index,
-    required String orderId,
-    required String date,
-    required String status,
-    required double total,
-    required String items,
-    required Color color,
-  }) {
+  Widget _buildHistoryCard(BuildContext context, OrderModel order) {
+    String displayId = order.id ?? '';
+    if (displayId.length > 8) {
+      displayId = displayId.substring(0, 8).toUpperCase();
+    }
+
+    Color statusColor = Colors.orange;
+    if (order.status == 'Delivered') {
+      statusColor = Colors.teal;
+    } else if (order.status == 'Cancelled') {
+      statusColor = Colors.grey;
+    }
+
+    final itemsSummary = order.items.map((i) => '${i.quantity}x ${i.name}').join(', ');
+
     return Container(
       margin: const EdgeInsets.only(bottom: 15),
       padding: const EdgeInsets.all(16),
@@ -202,75 +145,55 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(orderId, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: color.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Text(
-                      status,
-                      style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  GestureDetector(
-                    onTap: () => _deleteOrder(index),
-                    child: Icon(Icons.delete_outline, color: Colors.grey[400], size: 20),
-                  ),
-                ],
+              Text('ORD-$displayId', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: statusColor.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  order.status,
+                  style: TextStyle(color: statusColor, fontSize: 12, fontWeight: FontWeight.bold),
+                ),
               ),
             ],
           ),
           const SizedBox(height: 12),
           Text(
-            items,
+            itemsSummary.isNotEmpty ? itemsSummary : 'No items specified',
             style: TextStyle(color: Colors.grey[600], fontSize: 14),
-            maxLines: 1,
+            maxLines: 2,
             overflow: TextOverflow.ellipsis,
           ),
           const SizedBox(height: 8),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(date, style: const TextStyle(color: Colors.grey, fontSize: 12)),
+              Text(DateFormat('MMM dd, yyyy • h:mm a').format(order.date), style: const TextStyle(color: Colors.grey, fontSize: 12)),
               Text(
-                '₱${total.toInt()}',
+                '₱${order.totalAmount.toInt()}',
                 style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.red, fontSize: 16),
               ),
             ],
           ),
-          const Divider(height: 24),
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: () {},
-                  style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: Colors.red),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          if (order.address != null && order.address!.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            Row(
+              children: [
+                const Icon(Icons.location_on_outlined, size: 14, color: Colors.grey),
+                const SizedBox(width: 4),
+                Expanded(
+                  child: Text(
+                    order.address!,
+                    style: const TextStyle(color: Colors.grey, fontSize: 12),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  child: const Text('Reorder', style: TextStyle(color: Colors.red)),
                 ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: () {},
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.grey[100],
-                    foregroundColor: Colors.black87,
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                  ),
-                  child: const Text('Details'),
-                ),
-              ),
-            ],
-          ),
+              ],
+            ),
+          ],
         ],
       ),
     );
