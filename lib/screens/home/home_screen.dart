@@ -30,6 +30,20 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  Widget _buildProductImage(String imageUrl) {
+    if (imageUrl.isEmpty) {
+      return const Icon(Icons.fastfood, color: Colors.red, size: 40);
+    }
+    if (imageUrl.startsWith('assets/')) {
+      return Image.asset(imageUrl, fit: BoxFit.cover);
+    }
+    return Image.network(
+      imageUrl,
+      fit: BoxFit.cover,
+      errorBuilder: (context, error, stackTrace) => const Icon(Icons.broken_image, color: Colors.grey),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -46,7 +60,48 @@ class _HomeScreenState extends State<HomeScreen> {
               return const Center(child: Text('No products available'));
             }
 
-            final allProducts = snapshot.data!;
+            final rawProducts = snapshot.data ?? [];
+            
+            // Consolidated 4 master products as requested
+            final List<Product> allProducts = [
+              Product(
+                id: 'longanisa_pork',
+                name: 'Longanisa (Pork)',
+                price: 85.0,
+                category: 'Longanisa',
+                imageUrl: 'assets/img_1.jpg',
+                description: 'Regular, Spicy & Sweet varieties available',
+                isBestseller: true,
+              ),
+              Product(
+                id: 'longanisa_chicken',
+                name: 'Longanisa Chicken',
+                price: 75.0,
+                category: 'Chicken',
+                imageUrl: 'assets/img_1.jpg',
+                description: 'Small & Big sizes available',
+                isBestseller: true,
+              ),
+              Product(
+                id: 'embutido',
+                name: 'Embutido',
+                price: 50.0,
+                category: 'Embutido',
+                imageUrl: 'assets/embutido.png',
+                description: 'Small & Big sizes available',
+                isBestseller: false,
+              ),
+              Product(
+                id: 'chili_oil',
+                name: 'Crispy Chili Garlic Oil',
+                price: 150.0,
+                category: 'Condiments',
+                imageUrl: 'assets/chiliOIL.jpg',
+                description: 'Extra crispy and spicy',
+                isBestseller: false,
+              ),
+            ];
+
             final bestsellers = allProducts.where((p) => p.isBestseller).toList();
             
             // Apply filtering logic
@@ -279,13 +334,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       color: Colors.grey[200],
                       height: 100,
                       width: double.infinity,
-                      child: imageUrl.isNotEmpty
-                          ? Image.network(
-                              imageUrl,
-                              fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) => const Icon(Icons.broken_image, color: Colors.grey),
-                            )
-                          : const Icon(Icons.fastfood, color: Colors.red, size: 40),
+                      child: _buildProductImage(imageUrl),
                     ),
                   ),
                   Positioned(
@@ -418,13 +467,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     color: Colors.grey[200],
                     height: 110,
                     width: double.infinity,
-                    child: imageUrl.isNotEmpty
-                        ? Image.network(
-                            imageUrl,
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) => const Icon(Icons.broken_image, color: Colors.grey),
-                          )
-                        : const Icon(Icons.fastfood, color: Colors.red, size: 40),
+                    child: _buildProductImage(imageUrl),
                   ),
                 ),
                 if (product.isBestseller)

@@ -22,16 +22,57 @@ class _ProductOptionsBottomSheetState extends State<ProductOptionsBottomSheet> {
   String _selectedSize = 'Small';
   int _quantity = 1;
 
-  final List<String> _flavors = ['Regular', 'Spicy', 'Sweet'];
-  final List<String> _sizes = ['Small', 'Big'];
+  bool get _isPorkLonganisa {
+    final name = widget.product.name.toLowerCase();
+    return name.contains('longanisa') && !name.contains('chicken');
+  }
+
+  bool get _isChickenLonganisa {
+    final name = widget.product.name.toLowerCase();
+    return name.contains('chicken');
+  }
+
+  bool get _isEmbutido {
+    final name = widget.product.name.toLowerCase();
+    return name.contains('embutido');
+  }
+
+  bool get _isChiliOil {
+    final name = widget.product.name.toLowerCase();
+    return name.contains('chili') || name.contains('oil');
+  }
 
   double get _calculatedPrice {
-    double base = widget.product.price;
-    // Add extra price for Big size if desired (e.g., +₱40)
-    if (_selectedSize == 'Big') {
-      base += 40;
+    if (_isChickenLonganisa) {
+      return _selectedSize == 'Big' ? 150.0 : 75.0;
+    } else if (_isEmbutido) {
+      return _selectedSize == 'Big' ? 100.0 : 50.0;
+    } else if (_isChiliOil) {
+      return 150.0;
+    } else if (_isPorkLonganisa) {
+      if (_selectedFlavor == 'Regular') {
+        return _selectedSize == 'Big' ? 170.0 : 85.0;
+      } else if (_selectedFlavor == 'Spicy') {
+        return _selectedSize == 'Big' ? 180.0 : 90.0;
+      } else if (_selectedFlavor == 'Sweet') {
+        return 200.0; // Sweet per kilo
+      }
     }
-    return base;
+    return widget.product.price;
+  }
+
+  Widget _buildProductImage(String imageUrl) {
+    if (imageUrl.isEmpty) {
+      return const Icon(Icons.fastfood, color: Colors.red);
+    }
+    if (imageUrl.startsWith('assets/')) {
+      return Image.asset(imageUrl, fit: BoxFit.cover);
+    }
+    return Image.network(
+      imageUrl,
+      fit: BoxFit.cover,
+      errorBuilder: (context, error, stackTrace) => const Icon(Icons.fastfood, color: Colors.red),
+    );
   }
 
   @override
@@ -76,14 +117,7 @@ class _ProductOptionsBottomSheetState extends State<ProductOptionsBottomSheet> {
                     width: 70,
                     height: 70,
                     color: Colors.grey[200],
-                    child: imageUrl.isNotEmpty
-                        ? Image.network(
-                            imageUrl,
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) =>
-                                const Icon(Icons.fastfood, color: Colors.red),
-                          )
-                        : const Icon(Icons.fastfood, color: Colors.red),
+                    child: _buildProductImage(imageUrl),
                   ),
                 ),
                 const SizedBox(width: 15),
@@ -121,63 +155,80 @@ class _ProductOptionsBottomSheetState extends State<ProductOptionsBottomSheet> {
             ),
             const Divider(height: 30),
 
-            // Flavor / Category Selection
-            const Text(
-              'Choose Category / Flavor',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-            ),
-            const SizedBox(height: 10),
-            Wrap(
-              spacing: 10,
-              children: _flavors.map((flavor) {
-                final isSelected = _selectedFlavor == flavor;
-                return ChoiceChip(
-                  label: Text(flavor),
-                  selected: isSelected,
-                  selectedColor: Colors.red,
-                  labelStyle: TextStyle(
-                    color: isSelected ? Colors.white : Colors.black87,
-                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                  ),
-                  backgroundColor: Colors.grey[100],
-                  onSelected: (selected) {
-                    setState(() {
-                      _selectedFlavor = flavor;
-                    });
-                  },
-                );
-              }).toList(),
-            ),
-            const SizedBox(height: 20),
+            // 1. Flavor / Category Selection (Only for Pork Longanisa)
+            if (_isPorkLonganisa) ...[
+              const Text(
+                'Choose Category / Flavor',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+              ),
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 10,
+                children: ['Regular', 'Spicy', 'Sweet'].map((flavor) {
+                  final isSelected = _selectedFlavor == flavor;
+                  return ChoiceChip(
+                    label: Text(flavor == 'Sweet' ? '$flavor (₱200/kilo)' : flavor),
+                    selected: isSelected,
+                    selectedColor: Colors.red,
+                    labelStyle: TextStyle(
+                      color: isSelected ? Colors.white : Colors.black87,
+                      fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                    ),
+                    backgroundColor: Colors.grey[100],
+                    onSelected: (selected) {
+                      setState(() {
+                        _selectedFlavor = flavor;
+                      });
+                    },
+                  );
+                }).toList(),
+              ),
+              const SizedBox(height: 20),
+            ],
 
-            // Type / Size Selection
-            const Text(
-              'Choose Type / Size',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-            ),
-            const SizedBox(height: 10),
-            Wrap(
-              spacing: 10,
-              children: _sizes.map((size) {
-                final isSelected = _selectedSize == size;
-                return ChoiceChip(
-                  label: Text(size == 'Big' ? '$size (+₱40)' : size),
-                  selected: isSelected,
-                  selectedColor: Colors.red,
-                  labelStyle: TextStyle(
-                    color: isSelected ? Colors.white : Colors.black87,
-                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                  ),
-                  backgroundColor: Colors.grey[100],
-                  onSelected: (selected) {
-                    setState(() {
-                      _selectedSize = size;
-                    });
-                  },
-                );
-              }).toList(),
-            ),
-            const SizedBox(height: 20),
+            // 2. Type / Size Selection (For Pork Longanisa, Chicken Longanisa, Embutido)
+            if (!_isChiliOil && (_selectedFlavor != 'Sweet' || !_isPorkLonganisa)) ...[
+              const Text(
+                'Choose Type / Size',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+              ),
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 10,
+                children: ['Small', 'Big'].map((size) {
+                  final isSelected = _selectedSize == size;
+                  String priceLabel = size;
+                  if (_isPorkLonganisa) {
+                    if (_selectedFlavor == 'Regular') {
+                      priceLabel = size == 'Small' ? 'Small (₱85)' : 'Big (₱170)';
+                    } else if (_selectedFlavor == 'Spicy') {
+                      priceLabel = size == 'Small' ? 'Small (₱90)' : 'Big (₱180)';
+                    }
+                  } else if (_isChickenLonganisa) {
+                    priceLabel = size == 'Small' ? 'Small (₱75)' : 'Big (₱150)';
+                  } else if (_isEmbutido) {
+                    priceLabel = size == 'Small' ? 'Small (₱50)' : 'Big (₱100)';
+                  }
+
+                  return ChoiceChip(
+                    label: Text(priceLabel),
+                    selected: isSelected,
+                    selectedColor: Colors.red,
+                    labelStyle: TextStyle(
+                      color: isSelected ? Colors.white : Colors.black87,
+                      fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                    ),
+                    backgroundColor: Colors.grey[100],
+                    onSelected: (selected) {
+                      setState(() {
+                        _selectedSize = size;
+                      });
+                    },
+                  );
+                }).toList(),
+              ),
+              const SizedBox(height: 20),
+            ],
 
             // Quantity selector
             Row(
@@ -227,8 +278,12 @@ class _ProductOptionsBottomSheetState extends State<ProductOptionsBottomSheet> {
                   ),
                 ),
                 onPressed: () {
-                  final cartId = '${widget.product.id}_$_selectedFlavor-$_selectedSize';
-                  final customName = '${widget.product.name} [$_selectedFlavor, $_selectedSize]';
+                  final variantDesc = _isPorkLonganisa && _selectedFlavor == 'Sweet'
+                      ? 'Sweet'
+                      : (_isChiliOil ? 'Standard' : '$_selectedFlavor, $_selectedSize');
+                      
+                  final cartId = '${widget.product.id}_$variantDesc';
+                  final customName = '${widget.product.name} [$variantDesc]';
                   
                   Provider.of<CartProvider>(context, listen: false).addItem(
                     cartId,

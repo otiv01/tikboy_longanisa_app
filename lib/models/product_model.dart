@@ -44,7 +44,7 @@ class Product {
 
   String getFullImageUrl(String baseUrl) {
     if (imageUrl == null || imageUrl!.isEmpty) return '';
-    if (imageUrl!.startsWith('http')) return imageUrl!;
+    if (imageUrl!.startsWith('assets/') || imageUrl!.startsWith('http')) return imageUrl!;
     return '$baseUrl/assets/$imageUrl';
   }
 }

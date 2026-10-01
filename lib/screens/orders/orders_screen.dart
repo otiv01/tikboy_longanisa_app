@@ -27,6 +27,59 @@ class _OrdersScreenState extends State<OrdersScreen> {
     _ordersFuture = DirectusApiService().fetchOrders(auth.accessToken);
   }
 
+  void _showRefundDialog(OrderModel order) {
+    final reasonController = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Request Refund'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Please provide a reason for your refund request:'),
+            const SizedBox(height: 10),
+            TextField(
+              controller: reasonController,
+              maxLines: 3,
+              decoration: InputDecoration(
+                hintText: 'e.g., Wrong items, damaged product...',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
+            onPressed: () async {
+              Navigator.pop(ctx);
+              try {
+                final auth = Provider.of<AuthProvider>(context, listen: false);
+                await DirectusApiService().updateOrderStatus(order.id!, 'Refund Requested', auth.accessToken);
+                if (!mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Refund request submitted successfully')),
+                );
+                setState(() => _refreshOrders());
+              } catch (e) {
+                if (!mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Failed to request refund: $e')),
+                );
+              }
+            },
+            child: const Text('Submit Refund'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -169,27 +222,46 @@ class _OrdersScreenState extends State<OrdersScreen> {
               ],
             ),
             const SizedBox(height: 20),
-            SizedBox(
-              width: double.infinity,
-              height: 45,
-              child: ElevatedButton.icon(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => TrackOrderScreen(orderId: order.id ?? ''),
+            Row(
+              children: [
+                Expanded(
+                  child: SizedBox(
+                    height: 45,
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => TrackOrderScreen(orderId: order.id ?? ''),
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.directions_bike, size: 18),
+                      label: const Text('Track Order', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        elevation: 0,
+                      ),
                     ),
-                  );
-                },
-                icon: const Icon(Icons.directions_bike, size: 18),
-                label: const Text('Track Order', style: TextStyle(fontWeight: FontWeight.bold)),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.red,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  elevation: 0,
+                  ),
                 ),
-              ),
+                if (order.status.toLowerCase() != 'refund requested' && order.status.toLowerCase() != 'refunded') ...[
+                  const SizedBox(width: 10),
+                  SizedBox(
+                    height: 45,
+                    child: OutlinedButton(
+                      onPressed: () => _showRefundDialog(order),
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: Colors.red),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      child: const Text('Refund', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+                    ),
+                  ),
+                ],
+              ],
             ),
           ],
         ),

@@ -122,4 +122,26 @@ class DirectusApiService {
       throw Exception('Network error: $e');
     }
   }
+
+  // 6. Update Order Status (e.g. Request Refund)
+  Future<void> updateOrderStatus(String orderId, String newStatus, String? token) async {
+    try {
+      final response = await http.patch(
+        Uri.parse('$baseUrl/items/orders/$orderId'),
+        headers: {
+          'Content-Type': 'application/json',
+          if (token != null) 'Authorization': 'Bearer $token',
+        },
+        body: json.encode({'status': newStatus}),
+      );
+
+      if (response.statusCode != 200 && response.statusCode != 204 && response.statusCode != 201) {
+        final error = json.decode(response.body);
+        throw Exception(error['errors']?[0]['message'] ?? 'Failed to update order status');
+      }
+    } catch (e) {
+      if (e is Exception) rethrow;
+      throw Exception('Connection error: $e');
+    }
+  }
 }

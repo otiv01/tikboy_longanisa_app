@@ -27,6 +27,20 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
     );
   }
 
+  Widget _buildProductImage(String imageUrl) {
+    if (imageUrl.isEmpty) {
+      return const Icon(Icons.fastfood, color: Colors.red, size: 40);
+    }
+    if (imageUrl.startsWith('assets/')) {
+      return Image.asset(imageUrl, fit: BoxFit.cover);
+    }
+    return Image.network(
+      imageUrl,
+      fit: BoxFit.cover,
+      errorBuilder: (context, error, stackTrace) => const Icon(Icons.broken_image, color: Colors.grey),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -104,13 +118,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                     height: 110,
                     width: double.infinity,
                     color: Colors.grey[100],
-                    child: imageUrl.isNotEmpty
-                        ? Image.network(
-                            imageUrl,
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) => const Icon(Icons.broken_image, color: Colors.grey),
-                          )
-                        : const Icon(Icons.fastfood, color: Colors.red, size: 40),
+                    child: _buildProductImage(imageUrl),
                   ),
                 ),
                 Positioned(
