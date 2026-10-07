@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'chatbot_screen.dart';
 
 class HelpSupportScreen extends StatelessWidget {
   const HelpSupportScreen({super.key});
@@ -41,16 +40,6 @@ class HelpSupportScreen extends StatelessWidget {
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 15),
-            _buildContactCard(
-              Icons.chat_bubble_outline,
-              'Live Chat',
-              'Chat with our support bot',
-              Colors.blue,
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const ChatbotScreen()),
-              ),
-            ),
             _buildContactCard(Icons.email_outlined, 'Email', 'support@tikboy.com', Colors.orange),
             _buildContactCard(Icons.phone_outlined, 'Phone', '+63 912 345 6789', Colors.green),
             const SizedBox(height: 40),

@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../providers/cart_provider.dart';
 import '../../providers/notification_provider.dart';
 import '../../providers/favorites_provider.dart';
 import '../../services/directus_api_service.dart';
 import '../../models/product_model.dart';
 import '../notifications/notification_screen.dart';
+import '../cart/cart_screen.dart';
 import '../../widgets/product_options_bottom_sheet.dart';
+import '../../widgets/chatbot_dialog.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -151,18 +154,106 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           Row(
             children: [
-              _buildIconButton(Icons.shopping_cart_outlined, () {}),
+              _buildIconButton(
+                Icons.smart_toy_outlined,
+                () => showDialog(
+                  context: context,
+                  builder: (_) => const ChatbotDialog(),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Consumer<CartProvider>(
+                builder: (context, cart, child) {
+                  return Stack(
+                    children: [
+                      _buildIconButton(
+                        Icons.shopping_cart_outlined,
+                        () => Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const CartScreen()),
+                        ),
+                      ),
+                      if (cart.itemCount > 0)
+                        Positioned(
+                          right: 8,
+                          top: 8,
+                          child: Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
+                            constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                            child: Text(
+                              '${cart.itemCount}',
+                              style: const TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold),
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                        ),
+                    ],
+                  );
+                },
+              ),
               const SizedBox(width: 10),
               Consumer<NotificationProvider>(
                 builder: (context, provider, child) {
                   return Stack(
                     children: [
-                      _buildIconButton(
-                        Icons.notifications_none_rounded,
-                        () => Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (_) => const NotificationScreen()),
-                        ),
+                      PopupMenuButton<String>(
+                        offset: const Offset(0, 45),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                        itemBuilder: (context) {
+                          if (provider.notifications.isEmpty) {
+                            return [
+                              const PopupMenuItem(
+                                enabled: false,
+                                child: Text('No notifications', style: TextStyle(color: Colors.grey)),
+                              ),
+                            ];
+                          }
+                          return [
+                            PopupMenuItem(
+                              enabled: false,
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  const Text('Notifications', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black)),
+                                  TextButton(
+                                    onPressed: () {
+                                      provider.markAllAsRead();
+                                      Navigator.pop(context);
+                                    },
+                                    child: const Text('Mark all read', style: TextStyle(fontSize: 11, color: Colors.red)),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const PopupMenuDivider(),
+                            ...provider.notifications.take(5).map((n) => PopupMenuItem(
+                              onTap: () => provider.markAsRead(n.id),
+                              child: SizedBox(
+                                width: 260,
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(n.title, style: TextStyle(fontWeight: n.isRead ? FontWeight.normal : FontWeight.bold, fontSize: 13)),
+                                    const SizedBox(height: 2),
+                                    Text(n.message, style: const TextStyle(fontSize: 11, color: Colors.grey), maxLines: 2, overflow: TextOverflow.ellipsis),
+                                    const Divider(height: 10),
+                                  ],
+                                ),
+                              ),
+                            )),
+                            PopupMenuItem(
+                              onTap: () => Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (_) => const NotificationScreen()),
+                              ),
+                              child: const Center(
+                                child: Text('View all notifications', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 12)),
+                              ),
+                            ),
+                          ];
+                        },
+                        child: _buildIconButton(Icons.notifications_none_rounded, () {}),
                       ),
                       if (provider.unreadCount > 0)
                         Positioned(
