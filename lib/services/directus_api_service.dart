@@ -94,11 +94,16 @@ class DirectusApiService {
       // 1. Validate stock availability first
       for (var item in order.items) {
         dynamic prodRes;
-        if (item.productId != null && item.productId!.isNotEmpty) {
+        String? cleanProductId = item.productId;
+        if (cleanProductId != null && cleanProductId.contains('_')) {
+          cleanProductId = cleanProductId.split('_').first;
+        }
+
+        if (cleanProductId != null && cleanProductId.isNotEmpty) {
           prodRes = await _supabase
               .from('products')
               .select('id, stock, name')
-              .eq('id', item.productId!)
+              .eq('id', cleanProductId)
               .maybeSingle();
         }
 
@@ -129,11 +134,16 @@ class DirectusApiService {
       // 3. Deduct stock for each item using atomic RPC function (bypasses RLS & avoids race conditions)
       for (var item in order.items) {
         dynamic prodRes;
-        if (item.productId != null && item.productId!.isNotEmpty) {
+        String? cleanProductId = item.productId;
+        if (cleanProductId != null && cleanProductId.contains('_')) {
+          cleanProductId = cleanProductId.split('_').first;
+        }
+
+        if (cleanProductId != null && cleanProductId.isNotEmpty) {
           prodRes = await _supabase
               .from('products')
               .select('id')
-              .eq('id', item.productId!)
+              .eq('id', cleanProductId)
               .maybeSingle();
         }
 

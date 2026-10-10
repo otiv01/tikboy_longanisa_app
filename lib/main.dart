@@ -6,6 +6,7 @@ import 'providers/cart_provider.dart';
 import 'providers/notification_provider.dart';
 import 'providers/favorites_provider.dart';
 import 'providers/address_provider.dart';
+import 'providers/user_profile_provider.dart';
 import 'main_navigation.dart';
 import 'screens/auth/landing_screen.dart';
 
@@ -33,6 +34,7 @@ Future<void> main() async {
         ChangeNotifierProvider(create: (_) => NotificationProvider()),
         ChangeNotifierProvider(create: (_) => FavoritesProvider()),
         ChangeNotifierProvider(create: (_) => AddressProvider()),
+        ChangeNotifierProvider(create: (_) => UserProfileProvider()),
       ],
       child: const TikboyApp(),
     ),

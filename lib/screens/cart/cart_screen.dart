@@ -5,6 +5,8 @@ import '../../providers/auth_provider.dart';
 import '../../providers/address_provider.dart';
 import '../../services/directus_api_service.dart';
 import '../../models/order_model.dart';
+import '../../providers/notification_provider.dart';
+import '../../models/notification_model.dart';
 import '../profile/saved_addresses_screen.dart';
 
 class CartScreen extends StatefulWidget {
@@ -38,14 +40,18 @@ class _CartScreenState extends State<CartScreen> {
 
     setState(() => _isOrdering = true);
 
+    final notificationProvider = Provider.of<NotificationProvider>(context, listen: false);
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+
     try {
       final order = OrderModel(
         totalAmount: cart.totalAmount,
         date: DateTime.now(),
         address: defaultAddress.address,
         items: cart.items.values.map((item) {
+          final baseProductId = item.id.contains('_') ? item.id.split('_').first : item.id;
           return OrderItem(
-            productId: item.id,
+            productId: baseProductId,
             name: item.name,
             quantity: item.quantity,
             price: item.price,
@@ -55,21 +61,31 @@ class _CartScreenState extends State<CartScreen> {
 
       await apiService.createOrder(order, auth.accessToken);
 
-      if (mounted) {
-        cart.clearCart();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Order placed successfully! 🎉'), backgroundColor: Colors.green),
-        );
-      }
+      if (!mounted) return;
+
+      notificationProvider.addNotification(
+        NotificationModel(
+          id: DateTime.now().millisecondsSinceEpoch.toString(),
+          title: 'Order Placed Successfully! 🎉',
+          message: 'Your order totaling ₱${cart.totalAmount.toInt()} has been placed and is now pending.',
+          timestamp: DateTime.now(),
+          type: NotificationType.order,
+        ),
+      );
+
+      cart.clearCart();
+      scaffoldMessenger.showSnackBar(
+        const SnackBar(content: Text('Order placed successfully! 🎉'), backgroundColor: Colors.green),
+      );
     } catch (e) {
       if (mounted) {
         if (e.toString().contains('SESSION_EXPIRED')) {
-          ScaffoldMessenger.of(context).showSnackBar(
+          scaffoldMessenger.showSnackBar(
             const SnackBar(content: Text('Session expired. Please sign in again.'), backgroundColor: Colors.orange),
           );
           auth.logout();
         } else {
-          ScaffoldMessenger.of(context).showSnackBar(
+          scaffoldMessenger.showSnackBar(
             SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
           );
         }

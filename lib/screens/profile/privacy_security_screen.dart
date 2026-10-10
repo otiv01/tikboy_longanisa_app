@@ -1,15 +1,7 @@
 import 'package:flutter/material.dart';
 
-class PrivacySecurityScreen extends StatefulWidget {
+class PrivacySecurityScreen extends StatelessWidget {
   const PrivacySecurityScreen({super.key});
-
-  @override
-  State<PrivacySecurityScreen> createState() => _PrivacySecurityScreenState();
-}
-
-class _PrivacySecurityScreenState extends State<PrivacySecurityScreen> {
-  bool _twoFactorAuth = false;
-  bool _shareData = true;
 
   @override
   Widget build(BuildContext context) {
@@ -33,31 +25,9 @@ class _PrivacySecurityScreenState extends State<PrivacySecurityScreen> {
               'Update your account password',
               onTap: () {},
             ),
-            _buildSwitchItem(
-              Icons.security_outlined,
-              'Two-Factor Authentication',
-              'Add an extra layer of security',
-              _twoFactorAuth,
-              (val) => setState(() => _twoFactorAuth = val),
-              Colors.blue,
-            ),
-            _buildSecurityItem(
-              Icons.fingerprint_outlined,
-              'Biometric Login',
-              'Use fingerprint or face ID to login',
-              onTap: () {},
-            ),
             
             const SizedBox(height: 30),
             _buildSectionLabel('PRIVACY'),
-            _buildSwitchItem(
-              Icons.share_outlined,
-              'Share Usage Data',
-              'Help us improve by sharing app data',
-              _shareData,
-              (val) => setState(() => _shareData = val),
-              Colors.green,
-            ),
             _buildSecurityItem(
               Icons.location_off_outlined,
               'Location Access',
@@ -112,27 +82,6 @@ class _PrivacySecurityScreenState extends State<PrivacySecurityScreen> {
         subtitle: Text(subtitle, style: const TextStyle(fontSize: 11, color: Colors.grey)),
         trailing: const Icon(Icons.arrow_forward_ios, size: 14, color: Colors.grey),
         onTap: onTap,
-      ),
-    );
-  }
-
-  Widget _buildSwitchItem(IconData icon, String title, String subtitle, bool value, ValueChanged<bool> onChanged, Color color) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      decoration: BoxDecoration(
-        color: Colors.grey[50],
-        borderRadius: BorderRadius.circular(15),
-      ),
-      child: ListTile(
-        leading: Icon(icon, color: color, size: 22),
-        title: Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
-        subtitle: Text(subtitle, style: const TextStyle(fontSize: 11, color: Colors.grey)),
-        trailing: Switch.adaptive(
-          value: value,
-          onChanged: onChanged,
-          activeTrackColor: Colors.teal.withOpacity(0.5),
-          activeThumbColor: Colors.teal,
-        ),
       ),
     );
   }

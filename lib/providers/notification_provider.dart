@@ -30,6 +30,11 @@ class NotificationProvider with ChangeNotifier {
 
   int get unreadCount => _notifications.where((n) => !n.isRead).length;
 
+  void addNotification(NotificationModel notification) {
+    _notifications.insert(0, notification);
+    notifyListeners();
+  }
+
   void markAsRead(String id) {
     final index = _notifications.indexWhere((n) => n.id == id);
     if (index != -1) {

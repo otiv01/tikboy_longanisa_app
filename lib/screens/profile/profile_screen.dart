@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/user_profile_provider.dart';
 import '../auth/landing_screen.dart';
 import '../notifications/notification_screen.dart';
 import 'help_support_screen.dart';
@@ -135,6 +136,9 @@ class ProfileScreen extends StatelessWidget {
   }
 
   Widget _buildHeader(BuildContext context) {
+    final profile = Provider.of<UserProfileProvider>(context);
+    final initials = profile.name.isNotEmpty ? profile.name[0].toUpperCase() : 'C';
+
     return Container(
       width: double.infinity,
       decoration: const BoxDecoration(
@@ -151,17 +155,16 @@ class ProfileScreen extends StatelessWidget {
             children: [
               Stack(
                 children: [
-                  Container(
-                    width: 80,
-                    height: 80,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    alignment: Alignment.center,
-                    child: const Text(
-                      'C',
-                      style: TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.bold),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(20),
+                    child: Container(
+                      width: 80,
+                      height: 80,
+                      color: Colors.white.withValues(alpha: 0.2),
+                      alignment: Alignment.center,
+                      child: profile.imageUrl.isNotEmpty
+                          ? Image.network(profile.imageUrl, width: 80, height: 80, fit: BoxFit.cover, errorBuilder: (_, __, ___) => Text(initials, style: const TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.bold)))
+                          : Text(initials, style: const TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.bold)),
                     ),
                   ),
                   Positioned(
@@ -180,9 +183,11 @@ class ProfileScreen extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'Customer',
-                      style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
+                    Text(
+                      profile.name,
+                      style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 8),
                     Row(
@@ -197,7 +202,10 @@ class ProfileScreen extends StatelessWidget {
               ),
               IconButton(
                 icon: const Icon(Icons.edit_outlined, color: Colors.white70),
-                onPressed: () {},
+                onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const PersonalInfoScreen()),
+                ),
               ),
             ],
           ),
@@ -219,7 +227,7 @@ class ProfileScreen extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.2),
+        color: Colors.white.withValues(alpha: 0.2),
         borderRadius: BorderRadius.circular(15),
       ),
       child: Row(
@@ -265,7 +273,7 @@ class ProfileScreen extends StatelessWidget {
       child: ListTile(
         leading: Container(
           padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(color: iconColor.withOpacity(0.1), borderRadius: BorderRadius.circular(10)),
+          decoration: BoxDecoration(color: iconColor.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(10)),
           child: Icon(icon, color: iconColor, size: 20),
         ),
         title: Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
