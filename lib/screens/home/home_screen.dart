@@ -63,47 +63,7 @@ class _HomeScreenState extends State<HomeScreen> {
               return const Center(child: Text('No products available'));
             }
 
-            final rawProducts = snapshot.data ?? [];
-            
-            // Consolidated 4 master products as requested
-            final List<Product> allProducts = [
-              Product(
-                id: 'longanisa_pork',
-                name: 'Longanisa (Pork)',
-                price: 85.0,
-                category: 'Longanisa',
-                imageUrl: 'assets/img_1.jpg',
-                description: 'Regular, Spicy & Sweet varieties available',
-                isBestseller: true,
-              ),
-              Product(
-                id: 'longanisa_chicken',
-                name: 'Longanisa Chicken',
-                price: 75.0,
-                category: 'Chicken',
-                imageUrl: 'assets/img_1.jpg',
-                description: 'Small & Big sizes available',
-                isBestseller: true,
-              ),
-              Product(
-                id: 'embutido',
-                name: 'Embutido',
-                price: 50.0,
-                category: 'Embutido',
-                imageUrl: 'assets/embutido.png',
-                description: 'Small & Big sizes available',
-                isBestseller: false,
-              ),
-              Product(
-                id: 'chili_oil',
-                name: 'Crispy Chili Garlic Oil',
-                price: 150.0,
-                category: 'Condiments',
-                imageUrl: 'assets/chiliOIL.jpg',
-                description: 'Extra crispy and spicy',
-                isBestseller: false,
-              ),
-            ];
+            final List<Product> allProducts = snapshot.data ?? [];
 
             final bestsellers = allProducts.where((p) => p.isBestseller).toList();
             
@@ -143,16 +103,17 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildHeader(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           CircleAvatar(
-            radius: 22,
+            radius: 20,
             backgroundColor: Colors.red[50],
-            child: const Icon(Icons.person, color: Colors.red, size: 28),
+            child: const Icon(Icons.person, color: Colors.red, size: 24),
           ),
           Row(
+            mainAxisSize: MainAxisSize.min,
             children: [
               _buildIconButton(
                 Icons.smart_toy_outlined,
@@ -161,7 +122,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   builder: (_) => const ChatbotDialog(),
                 ),
               ),
-              const SizedBox(width: 10),
+              const SizedBox(width: 6),
               Consumer<CartProvider>(
                 builder: (context, cart, child) {
                   return Stack(
@@ -175,12 +136,12 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                       if (cart.itemCount > 0)
                         Positioned(
-                          right: 8,
-                          top: 8,
+                          right: 6,
+                          top: 6,
                           child: Container(
-                            padding: const EdgeInsets.all(4),
+                            padding: const EdgeInsets.all(3),
                             decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
-                            constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                            constraints: const BoxConstraints(minWidth: 14, minHeight: 14),
                             child: Text(
                               '${cart.itemCount}',
                               style: const TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold),
@@ -192,7 +153,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   );
                 },
               ),
-              const SizedBox(width: 10),
+              const SizedBox(width: 6),
               Consumer<NotificationProvider>(
                 builder: (context, provider, child) {
                   return Stack(

@@ -88,17 +88,72 @@ class DirectusApiService {
     ];
   }
 
-  // 4. Create Order in Supabase
+  // 4. Create Order in Supabase & Deduct Stock with Validation
   Future<void> createOrder(OrderModel order, String? token) async {
     try {
+      // 1. Validate stock availability first
+      for (var item in order.items) {
+        dynamic prodRes;
+        if (item.productId != null && item.productId!.isNotEmpty) {
+          prodRes = await _supabase
+              .from('products')
+              .select('id, stock, name')
+              .eq('id', item.productId!)
+              .maybeSingle();
+        }
+
+        if (prodRes == null) {
+          prodRes = await _supabase
+              .from('products')
+              .select('id, stock, name')
+              .eq('name', item.name)
+              .maybeSingle();
+        }
+
+        if (prodRes != null) {
+          int currentStock = (prodRes['stock'] as num?)?.toInt() ?? 100;
+          if (item.quantity > currentStock) {
+            throw Exception('Insufficient stock for "${prodRes['name'] ?? item.name}". Only $currentStock left.');
+          }
+        }
+      }
+
+      // 2. Insert order in Supabase
       await _supabase.from('orders').insert({
         'total': order.totalAmount,
         'status': order.status,
         'address': order.address,
         'items': order.items.map((item) => item.toJson()).toList(),
       });
+
+      // 3. Deduct stock for each item using atomic RPC function (bypasses RLS & avoids race conditions)
+      for (var item in order.items) {
+        dynamic prodRes;
+        if (item.productId != null && item.productId!.isNotEmpty) {
+          prodRes = await _supabase
+              .from('products')
+              .select('id')
+              .eq('id', item.productId!)
+              .maybeSingle();
+        }
+
+        if (prodRes == null) {
+          prodRes = await _supabase
+              .from('products')
+              .select('id')
+              .eq('name', item.name)
+              .maybeSingle();
+        }
+
+        if (prodRes != null) {
+          await _supabase.rpc('decrement_stock', params: {
+            'p_product_id': prodRes['id'],
+            'p_quantity': item.quantity,
+          });
+        }
+      }
     } catch (e) {
-      throw Exception('Failed to place order in Supabase: $e');
+      throw Exception('Failed to place order and update stock: $e');
     }
   }
 

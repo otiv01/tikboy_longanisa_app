@@ -19,7 +19,7 @@ class _ChatbotDialogState extends State<ChatbotDialog> {
   ];
 
   Future<void> _callGeminiAI(String userMessage) async {
-    const apiKey = 'YOUR_GEMINI_API_KEY';
+    const apiKey = String.fromEnvironment('GEMINI_API_KEY', defaultValue: 'YOUR_GEMINI_API_KEY');
     final url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=$apiKey';
 
     try {

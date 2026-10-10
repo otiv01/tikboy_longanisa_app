@@ -1,22 +1,57 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:geolocator/geolocator.dart';
 
-class TrackOrderScreen extends StatelessWidget {
+class TrackOrderScreen extends StatefulWidget {
   final String orderId;
 
   const TrackOrderScreen({super.key, required this.orderId});
 
   @override
+  State<TrackOrderScreen> createState() => _TrackOrderScreenState();
+}
+
+class _TrackOrderScreenState extends State<TrackOrderScreen> {
+  // Customer delivery destination (Lucban, Quezon center as sample)
+  final LatLng customerPos = const LatLng(14.1136, 121.5548);
+  // Rider current location (simulated or live device location)
+  LatLng riderPos = const LatLng(14.1160, 121.5580);
+  double distanceInKm = 0.0;
+
+  @override
+  void initState() {
+    super.initState();
+    _calculateDistance();
+  }
+
+  void _calculateDistance() {
+    double distanceInMeters = Geolocator.distanceBetween(
+      riderPos.latitude,
+      riderPos.longitude,
+      customerPos.latitude,
+      customerPos.longitude,
+    );
+    setState(() {
+      distanceInKm = distanceInMeters / 1000;
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
-    // Starting coordinates for Lucban, Quezon
-    const LatLng lucbanPos = LatLng(14.1136, 121.5548);
-    const LatLng riderPos = LatLng(14.1150, 121.5560);
+    // Estimate arrival time: ~3 minutes per kilometer in town traffic
+    int estimatedMinutes = (distanceInKm * 3).ceil();
+    if (estimatedMinutes < 1) estimatedMinutes = 1;
+
+    String displayId = widget.orderId;
+    if (displayId.length > 8) {
+      displayId = displayId.substring(0, 8).toUpperCase();
+    }
 
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Text('Track Order', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+        title: Text('Track Order: ORD-$displayId', style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 16)),
         backgroundColor: Colors.white,
         elevation: 0,
         foregroundColor: Colors.black,
@@ -29,8 +64,8 @@ class TrackOrderScreen extends StatelessWidget {
             child: Stack(
               children: [
                 FlutterMap(
-                  options: const MapOptions(
-                    initialCenter: lucbanPos,
+                  options: MapOptions(
+                    initialCenter: customerPos,
                     initialZoom: 15.0,
                   ),
                   children: [
@@ -40,19 +75,19 @@ class TrackOrderScreen extends StatelessWidget {
                     ),
                     MarkerLayer(
                       markers: [
-                        // User Location Marker
-                        const Marker(
-                          point: lucbanPos,
+                        // Customer Location Marker
+                        Marker(
+                          point: customerPos,
                           width: 40,
                           height: 40,
-                          child: Icon(Icons.location_on, color: Colors.blue, size: 40),
+                          child: const Icon(Icons.location_on, color: Colors.blue, size: 40),
                         ),
                         // Rider Location Marker
-                        const Marker(
+                        Marker(
                           point: riderPos,
                           width: 45,
                           height: 45,
-                          child: Stack(
+                          child: const Stack(
                             alignment: Alignment.center,
                             children: [
                               Icon(Icons.circle, color: Colors.white, size: 30),
@@ -64,7 +99,7 @@ class TrackOrderScreen extends StatelessWidget {
                     ),
                   ],
                 ),
-                // Floating Order Status Info
+                // Floating Order Status Info with live distance & ETA
                 Positioned(
                   top: 20,
                   left: 20,
@@ -76,7 +111,7 @@ class TrackOrderScreen extends StatelessWidget {
                       borderRadius: BorderRadius.circular(15),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.05),
+                          color: Colors.black.withValues(alpha: 0.05),
                           blurRadius: 10,
                           spreadRadius: 5,
                         ),
@@ -101,9 +136,12 @@ class TrackOrderScreen extends StatelessWidget {
                                 'Rider is on the way!',
                                 style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                               ),
+                              const SizedBox(height: 2),
                               Text(
-                                'Estimated delivery: 10-15 mins',
-                                style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                                '${distanceInKm.toStringAsFixed(2)} km • ~$estimatedMinutes mins',
+                                style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 11),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ],
                           ),
@@ -134,10 +172,15 @@ class TrackOrderScreen extends StatelessWidget {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(
-                          orderId,
-                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                        Expanded(
+                          child: Text(
+                            'Order ID: ORD-$displayId',
+                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
+                        const SizedBox(width: 8),
                         const Text(
                           'View Order Details',
                           style: TextStyle(color: Colors.red, fontSize: 12, fontWeight: FontWeight.bold),
@@ -167,7 +210,7 @@ class TrackOrderScreen extends StatelessWidget {
                     _buildTimelineItem(
                       'Delivered',
                       'Enjoy your authentic Lucban flavors!',
-                      'Expected 11:10 AM',
+                      'Expected in $estimatedMinutes mins',
                       isLast: true,
                     ),
                     const SizedBox(height: 30),
@@ -195,7 +238,7 @@ class TrackOrderScreen extends StatelessWidget {
               decoration: BoxDecoration(
                 color: isCompleted ? Colors.red : Colors.grey[200],
                 shape: BoxShape.circle,
-                border: isActive ? Border.all(color: Colors.red.withOpacity(0.2), width: 4) : null,
+                border: isActive ? Border.all(color: Colors.red.withValues(alpha: 0.2), width: 4) : null,
               ),
               child: isCompleted
                   ? const Icon(Icons.check, size: 12, color: Colors.white)
@@ -249,25 +292,21 @@ class TrackOrderScreen extends StatelessWidget {
       children: [
         Expanded(
           child: ElevatedButton.icon(
-            onPressed: () {},
+            onPressed: () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Calling delivery rider...')),
+              );
+            },
             icon: const Icon(Icons.phone),
-            label: const Text('Call Rider', style: TextStyle(fontWeight: FontWeight.bold)),
+            label: const Text('Call Rider'),
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 12),
+              backgroundColor: Colors.red[50],
+              foregroundColor: Colors.red,
+              elevation: 0,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              padding: const EdgeInsets.symmetric(vertical: 12),
             ),
           ),
-        ),
-        const SizedBox(width: 15),
-        Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: Colors.grey[100],
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: const Icon(Icons.chat_outlined, color: Colors.black87),
         ),
       ],
     );
