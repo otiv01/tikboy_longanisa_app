@@ -158,76 +158,29 @@ class _HomeScreenState extends State<HomeScreen> {
                 builder: (context, provider, child) {
                   return Stack(
                     children: [
-                      PopupMenuButton<String>(
-                        offset: const Offset(0, 45),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-                        itemBuilder: (context) {
-                          if (provider.notifications.isEmpty) {
-                            return [
-                              const PopupMenuItem(
-                                enabled: false,
-                                child: Text('No notifications', style: TextStyle(color: Colors.grey)),
-                              ),
-                            ];
-                          }
-                          return [
-                            PopupMenuItem(
-                              enabled: false,
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  const Text('Notifications', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black)),
-                                  TextButton(
-                                    onPressed: () {
-                                      provider.markAllAsRead();
-                                      Navigator.pop(context);
-                                    },
-                                    child: const Text('Mark all read', style: TextStyle(fontSize: 11, color: Colors.red)),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const PopupMenuDivider(),
-                            ...provider.notifications.take(5).map((n) => PopupMenuItem(
-                              onTap: () => provider.markAsRead(n.id),
-                              child: SizedBox(
-                                width: 260,
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(n.title, style: TextStyle(fontWeight: n.isRead ? FontWeight.normal : FontWeight.bold, fontSize: 13)),
-                                    const SizedBox(height: 2),
-                                    Text(n.message, style: const TextStyle(fontSize: 11, color: Colors.grey), maxLines: 2, overflow: TextOverflow.ellipsis),
-                                    const Divider(height: 10),
-                                  ],
-                                ),
-                              ),
-                            )),
-                            PopupMenuItem(
-                              onTap: () => Navigator.push(
-                                context,
-                                MaterialPageRoute(builder: (_) => const NotificationScreen()),
-                              ),
-                              child: const Center(
-                                child: Text('View all notifications', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 12)),
-                              ),
-                            ),
-                          ];
+                      _buildIconButton(
+                        Icons.notifications_none_rounded,
+                        () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => const NotificationScreen()),
+                          );
                         },
-                        child: _buildIconButton(Icons.notifications_none_rounded, () {}),
                       ),
                       if (provider.unreadCount > 0)
                         Positioned(
                           right: 8,
                           top: 8,
-                          child: Container(
-                            padding: const EdgeInsets.all(4),
-                            decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
-                            constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
-                            child: Text(
-                              '${provider.unreadCount}',
-                              style: const TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold),
-                              textAlign: TextAlign.center,
+                          child: IgnorePointer(
+                            child: Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
+                              constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                              child: Text(
+                                '${provider.unreadCount}',
+                                style: const TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold),
+                                textAlign: TextAlign.center,
+                              ),
                             ),
                           ),
                         ),
@@ -418,8 +371,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(product.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13), maxLines: 1, overflow: TextOverflow.ellipsis),
-                    if (product.description != null && product.description!.isNotEmpty)
-                      Text(product.description!, style: const TextStyle(color: Colors.grey, fontSize: 10), maxLines: 1),
+
                     const SizedBox(height: 4),
                     Text('₱${product.price.toInt()}', style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
                     const SizedBox(height: 8),
@@ -567,12 +519,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    if (product.description != null && product.description!.isNotEmpty)
-                      Text(
-                        product.description!,
-                        style: const TextStyle(color: Colors.grey, fontSize: 10),
-                        maxLines: 1,
-                      ),
+
                     const Spacer(),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,

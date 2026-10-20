@@ -134,13 +134,6 @@ class _ProductOptionsBottomSheetState extends State<ProductOptionsBottomSheet> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        widget.product.description ?? 'Authentic homemade style',
-                        style: const TextStyle(color: Colors.grey, fontSize: 12),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
                         '₱${_calculatedPrice.toInt()}',
                         style: const TextStyle(
                           color: Colors.red,

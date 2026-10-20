@@ -7,8 +7,7 @@ import 'providers/notification_provider.dart';
 import 'providers/favorites_provider.dart';
 import 'providers/address_provider.dart';
 import 'providers/user_profile_provider.dart';
-import 'main_navigation.dart';
-import 'screens/auth/landing_screen.dart';
+import 'screens/auth/root_router.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -53,11 +52,7 @@ class TikboyApp extends StatelessWidget {
         primarySwatch: Colors.red,
         useMaterial3: true,
       ),
-      home: Consumer<AuthProvider>(
-        builder: (context, auth, child) {
-          return auth.isAuthenticated ? const MainNavigationScreen() : const LandingScreen();
-        },
-      ),
+      home: const RootRouter(),
     );
   }
 }

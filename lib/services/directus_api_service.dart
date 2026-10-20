@@ -21,12 +21,16 @@ class DirectusApiService {
   }
 
   // 2. Register (Using Supabase Auth)
-  Future<void> register(String email, String password, String firstName) async {
+  Future<void> register(String email, String password, String firstName, {String role = 'customer'}) async {
     try {
       await _supabase.auth.signUp(
         email: email,
         password: password,
-        data: {'first_name': firstName},
+        data: {
+          'first_name': firstName,
+          'full_name': firstName,
+          'role': role,
+        },
       );
     } catch (e) {
       throw Exception('Registration error: $e');
@@ -125,6 +129,7 @@ class DirectusApiService {
 
       // 2. Insert order in Supabase
       await _supabase.from('orders').insert({
+        'user_id': _supabase.auth.currentUser?.id,
         'total': order.totalAmount,
         'status': order.status,
         'address': order.address,

@@ -160,7 +160,7 @@ class _ChatbotDialogState extends State<ChatbotDialog> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Tikboy Bot',
+                        'TikBot',
                         style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
                       ),
                       Text(

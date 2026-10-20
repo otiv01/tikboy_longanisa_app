@@ -1,7 +1,10 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class TrackOrderScreen extends StatefulWidget {
   final String orderId;
@@ -13,22 +16,89 @@ class TrackOrderScreen extends StatefulWidget {
 }
 
 class _TrackOrderScreenState extends State<TrackOrderScreen> {
-  // Customer delivery destination (Lucban, Quezon center as sample)
   final LatLng customerPos = const LatLng(14.1136, 121.5548);
-  // Rider current location (simulated or live device location)
-  LatLng riderPos = const LatLng(14.1160, 121.5580);
+  LatLng? riderPos;
   double distanceInKm = 0.0;
+  String orderStatus = 'placed';
+  bool hasRiderStarted = false;
+  StreamSubscription? _deliverySubscription;
+  StreamSubscription? _orderSubscription;
 
   @override
   void initState() {
     super.initState();
-    _calculateDistance();
+    _fetchInitialOrderAndDelivery();
+    _subscribeToRealtime();
+  }
+
+  @override
+  void dispose() {
+    _deliverySubscription?.cancel();
+    _orderSubscription?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _fetchInitialOrderAndDelivery() async {
+    try {
+      final supabase = Supabase.instance.client;
+      
+      final orderRes = await supabase.from('orders').select('status').eq('id', widget.orderId).maybeSingle();
+      if (orderRes != null) {
+        setState(() {
+          orderStatus = orderRes['status']?.toString() ?? 'placed';
+        });
+      }
+
+      final deliveryRes = await supabase.from('deliveries').select().eq('order_id', widget.orderId).maybeSingle();
+      if (deliveryRes != null) {
+        setState(() {
+          riderPos = LatLng(deliveryRes['lat'] as double, deliveryRes['lng'] as double);
+          hasRiderStarted = true;
+          _calculateDistance();
+        });
+      }
+    } catch (e) {
+      debugPrint('Error fetching initial tracking data: $e');
+    }
+  }
+
+  void _subscribeToRealtime() {
+    final supabase = Supabase.instance.client;
+
+    _deliverySubscription = supabase
+        .from('deliveries')
+        .stream(primaryKey: ['order_id'])
+        .eq('order_id', widget.orderId)
+        .listen((data) {
+          if (data.isNotEmpty) {
+            final row = data.first;
+            setState(() {
+              riderPos = LatLng(row['lat'] as double, row['lng'] as double);
+              hasRiderStarted = true;
+              _calculateDistance();
+            });
+          }
+        });
+
+    _orderSubscription = supabase
+        .from('orders')
+        .stream(primaryKey: ['id'])
+        .eq('id', widget.orderId)
+        .listen((data) {
+          if (data.isNotEmpty) {
+            final row = data.first;
+            setState(() {
+              orderStatus = row['status']?.toString() ?? orderStatus;
+            });
+          }
+        });
   }
 
   void _calculateDistance() {
+    if (riderPos == null) return;
     double distanceInMeters = Geolocator.distanceBetween(
-      riderPos.latitude,
-      riderPos.longitude,
+      riderPos!.latitude,
+      riderPos!.longitude,
       customerPos.latitude,
       customerPos.longitude,
     );
@@ -37,9 +107,20 @@ class _TrackOrderScreenState extends State<TrackOrderScreen> {
     });
   }
 
+  Future<void> _callRider() async {
+    final Uri phoneUri = Uri(scheme: 'tel', path: '+639123456789');
+    if (await canLaunchUrl(phoneUri)) {
+      await launchUrl(phoneUri);
+    } else {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not launch phone call'), backgroundColor: Colors.red),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    // Estimate arrival time: ~3 minutes per kilometer in town traffic
     int estimatedMinutes = (distanceInKm * 3).ceil();
     if (estimatedMinutes < 1) estimatedMinutes = 1;
 
@@ -58,14 +139,13 @@ class _TrackOrderScreenState extends State<TrackOrderScreen> {
       ),
       body: Column(
         children: [
-          // Real Map using OpenStreetMap
           Expanded(
             flex: 3,
             child: Stack(
               children: [
                 FlutterMap(
                   options: MapOptions(
-                    initialCenter: customerPos,
+                    initialCenter: riderPos ?? customerPos,
                     initialZoom: 15.0,
                   ),
                   children: [
@@ -75,31 +155,29 @@ class _TrackOrderScreenState extends State<TrackOrderScreen> {
                     ),
                     MarkerLayer(
                       markers: [
-                        // Customer Location Marker
                         Marker(
                           point: customerPos,
                           width: 40,
                           height: 40,
                           child: const Icon(Icons.location_on, color: Colors.blue, size: 40),
                         ),
-                        // Rider Location Marker
-                        Marker(
-                          point: riderPos,
-                          width: 45,
-                          height: 45,
-                          child: const Stack(
-                            alignment: Alignment.center,
-                            children: [
-                              Icon(Icons.circle, color: Colors.white, size: 30),
-                              Icon(Icons.directions_bike, color: Colors.red, size: 25),
-                            ],
+                        if (riderPos != null)
+                          Marker(
+                            point: riderPos!,
+                            width: 45,
+                            height: 45,
+                            child: const Stack(
+                              alignment: Alignment.center,
+                              children: [
+                                Icon(Icons.circle, color: Colors.white, size: 30),
+                                Icon(Icons.directions_bike, color: Colors.red, size: 25),
+                              ],
+                            ),
                           ),
-                        ),
                       ],
                     ),
                   ],
                 ),
-                // Floating Order Status Info with live distance & ETA
                 Positioned(
                   top: 20,
                   left: 20,
@@ -132,13 +210,21 @@ class _TrackOrderScreenState extends State<TrackOrderScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text(
-                                'Rider is on the way!',
-                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                              Text(
+                                orderStatus == 'delivered'
+                                    ? 'Order Delivered! 🎉'
+                                    : hasRiderStarted
+                                        ? 'Rider is on the way!'
+                                        : 'Waiting for rider to start delivery',
+                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
                               ),
                               const SizedBox(height: 2),
                               Text(
-                                '${distanceInKm.toStringAsFixed(2)} km • ~$estimatedMinutes mins',
+                                orderStatus == 'delivered'
+                                    ? 'Enjoy your meal!'
+                                    : hasRiderStarted
+                                        ? '${distanceInKm.toStringAsFixed(2)} km • ~$estimatedMinutes mins'
+                                        : 'Rider has not started sharing location yet',
                                 style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 11),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
@@ -153,7 +239,6 @@ class _TrackOrderScreenState extends State<TrackOrderScreen> {
               ],
             ),
           ),
-          // Status Timeline
           Expanded(
             flex: 4,
             child: Container(
@@ -181,9 +266,9 @@ class _TrackOrderScreenState extends State<TrackOrderScreen> {
                           ),
                         ),
                         const SizedBox(width: 8),
-                        const Text(
-                          'View Order Details',
-                          style: TextStyle(color: Colors.red, fontSize: 12, fontWeight: FontWeight.bold),
+                        Text(
+                          'Status: ${orderStatus.toUpperCase()}',
+                          style: const TextStyle(color: Colors.red, fontSize: 12, fontWeight: FontWeight.bold),
                         ),
                       ],
                     ),
@@ -191,30 +276,43 @@ class _TrackOrderScreenState extends State<TrackOrderScreen> {
                     _buildTimelineItem(
                       'Order Placed',
                       'We have received your order.',
-                      '10:30 AM',
                       isCompleted: true,
                     ),
                     _buildTimelineItem(
                       'Order Confirmed',
                       'Tikboy is preparing your longganisa.',
-                      '10:35 AM',
-                      isCompleted: true,
+                      isCompleted: orderStatus == 'confirmed' || orderStatus == 'out_for_delivery' || orderStatus == 'delivered',
                     ),
                     _buildTimelineItem(
                       'Out for Delivery',
                       'Your order is with our rider.',
-                      '10:50 AM',
-                      isCompleted: true,
-                      isActive: true,
+                      isCompleted: orderStatus == 'out_for_delivery' || orderStatus == 'delivered',
+                      isActive: orderStatus == 'out_for_delivery',
                     ),
                     _buildTimelineItem(
                       'Delivered',
                       'Enjoy your authentic Lucban flavors!',
-                      'Expected in $estimatedMinutes mins',
+                      isCompleted: orderStatus == 'delivered',
                       isLast: true,
+                      isActive: orderStatus == 'delivered',
                     ),
                     const SizedBox(height: 30),
-                    _buildContactRiderButton(),
+                    if (orderStatus == 'out_for_delivery')
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          onPressed: _callRider,
+                          icon: const Icon(Icons.phone),
+                          label: const Text('Call Rider', style: TextStyle(fontWeight: FontWeight.bold)),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.red[50],
+                            foregroundColor: Colors.red,
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                          ),
+                        ),
+                      ),
                   ],
                 ),
               ),
@@ -225,7 +323,7 @@ class _TrackOrderScreenState extends State<TrackOrderScreen> {
     );
   }
 
-  Widget _buildTimelineItem(String title, String subtitle, String time,
+  Widget _buildTimelineItem(String title, String subtitle,
       {bool isCompleted = false, bool isLast = false, bool isActive = false}) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -272,40 +370,8 @@ class _TrackOrderScreenState extends State<TrackOrderScreen> {
                   color: isCompleted ? Colors.grey[600] : Colors.grey[300],
                 ),
               ),
-              const SizedBox(height: 4),
-              Text(
-                time,
-                style: TextStyle(
-                  fontSize: 11,
-                  color: isCompleted ? Colors.red[300] : Colors.grey[300],
-                ),
-              ),
+              const SizedBox(height: 20),
             ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildContactRiderButton() {
-    return Row(
-      children: [
-        Expanded(
-          child: ElevatedButton.icon(
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Calling delivery rider...')),
-              );
-            },
-            icon: const Icon(Icons.phone),
-            label: const Text('Call Rider'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red[50],
-              foregroundColor: Colors.red,
-              elevation: 0,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              padding: const EdgeInsets.symmetric(vertical: 12),
-            ),
           ),
         ),
       ],

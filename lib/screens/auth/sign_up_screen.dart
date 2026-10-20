@@ -15,6 +15,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
 
+  String _selectedRole = 'customer';
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
   bool _isLoading = false;
@@ -33,6 +34,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
         _emailController.text,
         _passwordController.text,
         _nameController.text,
+        role: _selectedRole,
       );
 
       if (mounted) {
@@ -141,6 +143,42 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   ),
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide.none),
                 ),
+              ),
+              const SizedBox(height: 20),
+
+              // Role Selector (Customer vs Rider)
+              const Text('Register as:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.grey)),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: ChoiceChip(
+                      label: const Center(child: Text('Customer')),
+                      selected: _selectedRole == 'customer',
+                      selectedColor: Colors.red,
+                      labelStyle: TextStyle(
+                        color: _selectedRole == 'customer' ? Colors.white : Colors.black87,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      backgroundColor: Colors.grey[100],
+                      onSelected: (selected) => setState(() => _selectedRole = 'customer'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ChoiceChip(
+                      label: const Center(child: Text('Delivery Rider')),
+                      selected: _selectedRole == 'rider',
+                      selectedColor: Colors.red,
+                      labelStyle: TextStyle(
+                        color: _selectedRole == 'rider' ? Colors.white : Colors.black87,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      backgroundColor: Colors.grey[100],
+                      onSelected: (selected) => setState(() => _selectedRole = 'rider'),
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 32),
 

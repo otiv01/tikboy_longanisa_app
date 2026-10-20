@@ -141,17 +141,18 @@ class _CartScreenState extends State<CartScreen> {
       ),
       body: cart.items.isEmpty
           ? const Center(child: Text('Your cart is empty'))
-          : Column(
+          : ListView(
+              padding: const EdgeInsets.fromLTRB(20, 10, 20, 40),
               children: [
-                Expanded(
-                  child: ListView.builder(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    itemCount: items.length,
-                    itemBuilder: (ctx, i) => _buildCartItem(context, cart, itemKeys[i], items[i]),
-                  ),
+                ...List.generate(
+                  items.length,
+                  (i) => _buildCartItem(context, cart, itemKeys[i], items[i]),
                 ),
+                const SizedBox(height: 16),
                 _buildAddressSection(context, defaultAddress),
+                const SizedBox(height: 16),
                 _buildPromoAndProgress(cart),
+                const SizedBox(height: 16),
                 _buildOrderSummary(cart),
               ],
             ),
