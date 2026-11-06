@@ -276,14 +276,19 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text(
-                              'Order #ORD-$shortId',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w700,
-                                fontSize: 15,
-                                letterSpacing: 0.1,
+                            Expanded(
+                              child: Text(
+                                'Order #ORD-$shortId',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 15,
+                                  letterSpacing: 0.1,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ),
+                            const SizedBox(width: 8),
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                               decoration: BoxDecoration(
@@ -323,7 +328,15 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const Text('Collect Payment:', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                            const Flexible(
+                              child: Text(
+                                'Collect Payment:',
+                                style: TextStyle(fontSize: 12, color: Colors.grey),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
                             Text(
                               '₱$total',
                               style: const TextStyle(
@@ -421,14 +434,17 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Order #ORD-$shortId', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                      const SizedBox(height: 4),
-                      Text(address, style: const TextStyle(fontSize: 12, color: Colors.grey), maxLines: 1, overflow: TextOverflow.ellipsis),
-                    ],
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Order #ORD-$shortId', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14), maxLines: 1, overflow: TextOverflow.ellipsis),
+                        const SizedBox(height: 4),
+                        Text(address, style: const TextStyle(fontSize: 12, color: Colors.grey), maxLines: 1, overflow: TextOverflow.ellipsis),
+                      ],
+                    ),
                   ),
+                  const SizedBox(width: 8),
                   Text('₱$total', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.teal, fontSize: 16)),
                 ],
               ),
@@ -483,7 +499,33 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
             leading: const Icon(Icons.logout, color: Colors.red),
             title: const Text('Sign Out', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
             trailing: const Icon(Icons.chevron_right, color: Colors.grey),
-            onTap: () async {
+            onTap: () => _showSignOutDialog(context),
+          ),
+        ),
+      ],
+    );
+  }
+
+  void _showSignOutDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Sign Out', style: TextStyle(fontWeight: FontWeight.bold)),
+        content: const Text('Are you sure you want to sign out of your rider account?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            onPressed: () async {
+              Navigator.pop(ctx);
               await Provider.of<AuthProvider>(context, listen: false).logout();
               if (!context.mounted) return;
               Navigator.of(context).pushAndRemoveUntil(
@@ -491,9 +533,10 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
                 (route) => false,
               );
             },
+            child: const Text('Yes, Sign Out', style: TextStyle(fontWeight: FontWeight.bold)),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

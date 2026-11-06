@@ -14,27 +14,38 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
   bool _isLoading = false;
   final List<Map<String, dynamic>> _messages = [
     {
-      'text': 'Hello! I am Tikboy Bot 🤖. How can I help you with our delicious longganisa today?',
+      'text': 'Hello! I am TikBot AI 🤖. How can I help you with our delicious longganisa today?',
       'isUser': false,
     },
   ];
 
   Future<void> _callGeminiAI(String userMessage) async {
-    const apiKey = String.fromEnvironment('GEMINI_API_KEY', defaultValue: 'YOUR_GEMINI_API_KEY');
-    final url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=$apiKey';
+    const apiKey = 'YOUR_API_KEY';
+    
+    final url = apiKey.startsWith('AQ')
+        ? 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent'
+        : 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=$apiKey';
+
+    final headers = {
+      'Content-Type': 'application/json',
+      if (apiKey.startsWith('AQ'))
+        'Authorization': 'Bearer $apiKey'
+    };
 
     try {
       final response = await http.post(
         Uri.parse(url),
-        headers: {'Content-Type': 'application/json'},
+        headers: headers,
         body: json.encode({
           'system_instruction': {
-            'parts': {
-              'text': 'You are Tikboy Bot, a friendly AI customer support assistant for Tikboy Longanisa store in Tayabas, Quezon. '
-                      'Our menu & prices: Pork Longanisa (Regular: ₱85/₱170, Spicy: ₱90/₱180, Sweet: ₱200/kilo), '
-                      'Chicken Longanisa (₱75/₱150), Embutido (₱50/₱100), Crispy Chili Garlic Oil (₱150). '
-                      'Delivery is ₱40, but FREE for orders over ₱300. Customers can request refunds in My Orders.'
-            }
+            'parts': [
+              {
+                'text': 'You are TikBot AI, a friendly AI customer support assistant for Tikboy Longanisa store in Tayabas, Quezon. '
+                        'Our menu & prices: Pork Longanisa (Regular: ₱85/₱170, Spicy: ₱90/₱180, Sweet: ₱200/kilo), '
+                        'Chicken Longanisa (₱75/₱150), Embutido (₱50/₱100), Crispy Chili Garlic Oil (₱150). '
+                        'Delivery is ₱40, but FREE for orders over ₱300. Customers can request refunds in My Orders.'
+              }
+            ]
           },
           'contents': [
             {
@@ -59,15 +70,17 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
           });
         });
       } else {
+        debugPrint('Gemini API Error: ${response.statusCode} - ${response.body}');
         _fallbackResponse(userMessage);
       }
     } catch (e) {
+      debugPrint('Gemini API Exception: $e');
       _fallbackResponse(userMessage);
     }
   }
 
   void _fallbackResponse(String userMessage) {
-    String response = "I'm not quite sure about that. Try asking about 'prices', 'delivery', 'refunds', 'payment', or 'bestsellers'! 💡";
+    String response = "I'm here to help! Try asking about 'prices', 'delivery', or 'refunds'.";
     final userMessageLower = userMessage.toLowerCase();
 
     if (userMessageLower.contains('delivery') || userMessageLower.contains('ship') || userMessageLower.contains('fee')) {
@@ -79,7 +92,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
                  "• **Embutido**: ₱50 (Small) | ₱100 (Big)\n"
                  "• **Crispy Chili Garlic Oil**: ₱150 💰";
     } else if (userMessageLower.contains('refund') || userMessageLower.contains('cancel')) {
-      response = "You can request a refund on any active order by going to 'My Orders' and tapping the 'Refund' button. 🔄";
+      response = "You can request a refund by going to 'My Orders' and tapping the 'Refund' button on active orders. 🔄";
     } else if (userMessageLower.contains('payment') || userMessageLower.contains('pay') || userMessageLower.contains('gcash')) {
       response = "We accept Cash on Delivery (COD) and GCash payments during checkout! 💳";
     } else if (userMessageLower.contains('hour') || userMessageLower.contains('open') || userMessageLower.contains('time')) {
@@ -90,6 +103,8 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
       response = "You can place an order by choosing your favorite product, selecting your preferred flavor/size, adding it to your Cart, and checking out!";
     } else if (userMessageLower.contains('hi') || userMessageLower.contains('hello') || userMessageLower.contains('hey')) {
       response = "Hi there! Welcome to Tikboy Longanisa 😋. How can I assist you today?";
+    } else if (userMessageLower.contains('origin') || userMessageLower.contains('originate') || userMessageLower.contains('history') || userMessageLower.contains('where')) {
+      response = "Longanisa traces its roots to Spanish 'longaniza' introduced during the Spanish colonial period, famously localized in Lucban, Quezon! 🇵🇭";
     }
 
     if (!mounted) return;
@@ -124,11 +139,30 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.grey[50],
       appBar: AppBar(
-        title: const Text('Tikboy Support Bot', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
-        backgroundColor: Colors.white,
-        elevation: 1,
-        foregroundColor: Colors.black,
+        flexibleSpace: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Colors.red.shade800, Colors.deepOrange.shade600],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+        ),
+        title: const Row(
+          children: [
+            CircleAvatar(
+              backgroundColor: Colors.white,
+              radius: 16,
+              child: Icon(Icons.smart_toy, color: Colors.red, size: 18),
+            ),
+            SizedBox(width: 10),
+            Text('TikBot AI', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+          ],
+        ),
+        elevation: 0,
+        foregroundColor: Colors.white,
       ),
       body: Column(
         children: [
@@ -140,23 +174,26 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
                 final msg = _messages[index];
                 final isUser = msg['isUser'] as bool;
                 return Column(
-                  crossAxisAlignment: isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildChatBubble(msg['text'], isUser),
+                    _buildMessageBubble(msg['text'], isUser),
                     if (!isUser && index == 0) ...[
                       const SizedBox(height: 4),
-                      Wrap(
-                        spacing: 6,
-                        runSpacing: 6,
-                        children: ['Prices', 'Delivery', 'Refunds'].map((chipText) {
-                          return ActionChip(
-                            label: Text(chipText, style: const TextStyle(color: Colors.red, fontSize: 12)),
-                            backgroundColor: Colors.red.withValues(alpha: 0.1),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                            side: BorderSide.none,
-                            onPressed: () => _handleSend(chipText),
-                          );
-                        }).toList(),
+                      Padding(
+                        padding: const EdgeInsets.only(left: 36.0),
+                        child: Wrap(
+                          spacing: 6,
+                          runSpacing: 6,
+                          children: ['Prices', 'Delivery', 'Origin'].map((chipText) {
+                            return ActionChip(
+                              label: Text(chipText, style: const TextStyle(color: Colors.red, fontSize: 12, fontWeight: FontWeight.bold)),
+                              backgroundColor: Colors.red.withValues(alpha: 0.1),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                              side: BorderSide.none,
+                              onPressed: () => _handleSend(chipText),
+                            );
+                          }).toList(),
+                        ),
                       ),
                       const SizedBox(height: 10),
                     ],
@@ -176,29 +213,56 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
     );
   }
 
-  Widget _buildChatBubble(String text, bool isUser) {
-    return Align(
-      alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 15),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
-        decoration: BoxDecoration(
-          color: isUser ? Colors.red : Colors.grey[200],
-          borderRadius: BorderRadius.only(
-            topLeft: const Radius.circular(20),
-            topRight: const Radius.circular(20),
-            bottomLeft: Radius.circular(isUser ? 20 : 0),
-            bottomRight: Radius.circular(isUser ? 0 : 20),
+  Widget _buildMessageBubble(String text, bool isUser) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 14),
+      child: Row(
+        mainAxisAlignment: isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          if (!isUser) ...[
+            const CircleAvatar(
+              radius: 14,
+              backgroundColor: Colors.red,
+              child: Icon(Icons.smart_toy, size: 14, color: Colors.white),
+            ),
+            const SizedBox(width: 8),
+          ],
+          Flexible(
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.7),
+              decoration: BoxDecoration(
+                color: isUser ? Colors.red.shade700 : Colors.white,
+                borderRadius: BorderRadius.only(
+                  topLeft: const Radius.circular(20),
+                  topRight: const Radius.circular(20),
+                  bottomLeft: Radius.circular(isUser ? 20 : 4),
+                  bottomRight: Radius.circular(isUser ? 4 : 20),
+                ),
+                boxShadow: [
+                  BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 4, offset: const Offset(0, 2)),
+                ],
+              ),
+              child: Text(
+                text,
+                style: TextStyle(
+                  color: isUser ? Colors.white : Colors.black87,
+                  fontSize: 13.5,
+                  height: 1.3,
+                ),
+              ),
+            ),
           ),
-        ),
-        child: Text(
-          text,
-          style: TextStyle(
-            color: isUser ? Colors.white : Colors.black87,
-            fontSize: 14,
-          ),
-        ),
+          if (isUser) ...[
+            const SizedBox(width: 8),
+            const CircleAvatar(
+              radius: 14,
+              backgroundColor: Colors.grey,
+              child: Icon(Icons.person, size: 14, color: Colors.white),
+            ),
+          ],
+        ],
       ),
     );
   }
@@ -209,7 +273,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         boxShadow: [
-          BoxShadow(color: Colors.grey.withValues(alpha: 0.1), spreadRadius: 1, blurRadius: 5),
+          BoxShadow(color: Colors.grey.withValues(alpha: 0.08), spreadRadius: 1, blurRadius: 6),
         ],
       ),
       child: Row(
@@ -219,22 +283,23 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
               controller: _controller,
               decoration: InputDecoration(
                 hintText: 'Ask anything about our longanisa...',
+                hintStyle: const TextStyle(color: Colors.grey, fontSize: 13),
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(25),
+                  borderRadius: BorderRadius.circular(24),
                   borderSide: BorderSide.none,
                 ),
                 filled: true,
                 fillColor: Colors.grey[100],
-                contentPadding: const EdgeInsets.symmetric(horizontal: 20),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
               ),
               onSubmitted: (_) => _handleSend(),
             ),
           ),
           const SizedBox(width: 10),
           CircleAvatar(
-            backgroundColor: Colors.red,
+            backgroundColor: Colors.red.shade700,
             child: IconButton(
-              icon: const Icon(Icons.send, color: Colors.white),
+              icon: const Icon(Icons.send, color: Colors.white, size: 18),
               onPressed: () => _handleSend(),
             ),
           ),

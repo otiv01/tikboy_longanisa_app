@@ -7,6 +7,7 @@ import 'providers/notification_provider.dart';
 import 'providers/favorites_provider.dart';
 import 'providers/address_provider.dart';
 import 'providers/user_profile_provider.dart';
+import 'providers/loyalty_provider.dart';
 import 'screens/auth/root_router.dart';
 
 Future<void> main() async {
@@ -14,7 +15,7 @@ Future<void> main() async {
 
   await Supabase.initialize(
     url: 'https://eczdqewxpxaaqhsnbvlp.supabase.co',
-    anonKey: 'sb_publishable_-jrdjAsOBbWnE2SHnb3TAg_z-Hvj1_s',
+    publishableKey: 'sb_publishable_-jrdjAsOBbWnE2SHnb3TAg_z-Hvj1_s',
   );
 
   // Test Supabase Database Connection on Startup
@@ -34,6 +35,7 @@ Future<void> main() async {
         ChangeNotifierProvider(create: (_) => FavoritesProvider()),
         ChangeNotifierProvider(create: (_) => AddressProvider()),
         ChangeNotifierProvider(create: (_) => UserProfileProvider()),
+        ChangeNotifierProvider(create: (_) => LoyaltyProvider()),
       ],
       child: const TikboyApp(),
     ),

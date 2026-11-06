@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'dart:io';
 import '../../providers/cart_provider.dart';
 import '../../providers/notification_provider.dart';
 import '../../providers/favorites_provider.dart';
@@ -9,6 +10,8 @@ import '../notifications/notification_screen.dart';
 import '../cart/cart_screen.dart';
 import '../../widgets/product_options_bottom_sheet.dart';
 import '../../widgets/chatbot_dialog.dart';
+import '../../providers/user_profile_provider.dart';
+import '../../main_navigation.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -20,6 +23,17 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final apiService = DirectusApiService();
   String _selectedCategory = 'All';
+
+  ImageProvider? _getImageProvider(String path) {
+    if (path.isEmpty) return null;
+    if (path.startsWith('http')) {
+      return NetworkImage(path);
+    } else if (path.startsWith('assets/')) {
+      return AssetImage(path) as ImageProvider;
+    } else {
+      return FileImage(File(path));
+    }
+  }
 
   void _showProductOptions(BuildContext context, Product product, String baseUrl) {
     showModalBottomSheet(
@@ -107,10 +121,20 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          CircleAvatar(
-            radius: 20,
-            backgroundColor: Colors.red[50],
-            child: const Icon(Icons.person, color: Colors.red, size: 24),
+          Consumer<UserProfileProvider>(
+            builder: (context, profile, child) {
+              return GestureDetector(
+                onTap: () => MainNavigationScreen.jumpToTab(context, 3),
+                child: CircleAvatar(
+                  radius: 20,
+                  backgroundColor: Colors.red[50],
+                  backgroundImage: _getImageProvider(profile.imageUrl),
+                  child: profile.imageUrl.isEmpty
+                      ? const Icon(Icons.person, color: Colors.red, size: 24)
+                      : null,
+                ),
+              );
+            },
           ),
           Row(
             mainAxisSize: MainAxisSize.min,

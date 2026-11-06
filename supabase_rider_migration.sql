@@ -1,5 +1,5 @@
 -- ========================================================
--- RIDER FEATURE MIGRATION FOR TIKBOY LONGANISA (FIXED RLS & IDEMPOTENT)
+-- RIDER FEATURE MIGRATION FOR TIKBOY LONGANISA (SECURE BACKEND AUTO-ASSIGNMENT + FEEDBACK)
 -- Run this complete script in your Supabase SQL Editor.
 -- ========================================================
 
@@ -52,7 +52,8 @@ BEGIN
         COALESCE(NEW.raw_user_meta_data->>'full_name', 'Customer'),
         COALESCE(NEW.raw_user_meta_data->>'role', 'customer')
     )
-    ON CONFLICT (id) DO NOTHING;
+    ON CONFLICT (id) DO UPDATE
+    SET role = EXCLUDED.role;
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
@@ -62,7 +63,7 @@ CREATE TRIGGER on_auth_user_created
     AFTER INSERT ON auth.users
     FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
 
--- 4. Update orders table (add rider_id, user_id, and ensure status check)
+-- 4. Update orders table (add rider_id, user_id, rating, review, and ensure status check)
 DO $$
 BEGIN
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'orders' AND column_name = 'rider_id') THEN
@@ -70,6 +71,18 @@ BEGIN
     END IF;
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'orders' AND column_name = 'user_id') THEN
         ALTER TABLE public.orders ADD COLUMN user_id UUID REFERENCES auth.users(id);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'orders' AND column_name = 'rating') THEN
+        ALTER TABLE public.orders ADD COLUMN rating INT;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'orders' AND column_name = 'review') THEN
+        ALTER TABLE public.orders ADD COLUMN review TEXT;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'orders' AND column_name = 'destination_lat') THEN
+        ALTER TABLE public.orders ADD COLUMN destination_lat DOUBLE PRECISION;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'orders' AND column_name = 'destination_lng') THEN
+        ALTER TABLE public.orders ADD COLUMN destination_lng DOUBLE PRECISION;
     END IF;
 END $$;
 
@@ -86,17 +99,55 @@ CREATE POLICY "Customers can read their own orders"
     ON public.orders FOR SELECT
     USING (auth.uid() = user_id OR user_id IS NULL);
 
+DROP POLICY IF EXISTS "Customers can update their own orders for feedback" ON public.orders;
+CREATE POLICY "Customers can update their own orders for feedback"
+    ON public.orders FOR UPDATE
+    USING (auth.uid() = user_id OR user_id IS NULL)
+    WITH CHECK (auth.uid() = user_id OR user_id IS NULL);
+
 DROP POLICY IF EXISTS "Riders can read assigned orders" ON public.orders;
 CREATE POLICY "Riders can read assigned orders"
     ON public.orders FOR SELECT
     USING (rider_id = auth.uid());
+
+DROP POLICY IF EXISTS "Riders can update their assigned orders" ON public.orders;
+CREATE POLICY "Riders can update their assigned orders"
+    ON public.orders FOR UPDATE
+    USING (rider_id = auth.uid())
+    WITH CHECK (rider_id = auth.uid());
 
 DROP POLICY IF EXISTS "Admins have full access to orders" ON public.orders;
 CREATE POLICY "Admins have full access to orders"
     ON public.orders FOR ALL
     USING (public.is_admin());
 
--- 5. Create deliveries table
+-- 5. Secure Backend Auto-Assignment Trigger Function
+CREATE OR REPLACE FUNCTION public.auto_assign_rider()
+RETURNS TRIGGER AS $$
+DECLARE
+    v_rider_id UUID;
+BEGIN
+    SELECT id INTO v_rider_id
+    FROM public.profiles
+    WHERE role = 'rider'
+    LIMIT 1;
+
+    IF v_rider_id IS NOT NULL THEN
+        NEW.rider_id := v_rider_id;
+        NEW.status := 'confirmed';
+    END IF;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+DROP TRIGGER IF EXISTS tr_auto_assign_rider ON public.orders;
+CREATE TRIGGER tr_auto_assign_rider
+    BEFORE INSERT ON public.orders
+    FOR EACH ROW
+    EXECUTE FUNCTION public.auto_assign_rider();
+
+-- 6. Create deliveries table
 CREATE TABLE IF NOT EXISTS public.deliveries (
     order_id UUID PRIMARY KEY REFERENCES public.orders(id) ON DELETE CASCADE,
     rider_id UUID REFERENCES public.profiles(id),
@@ -126,10 +177,22 @@ CREATE POLICY "Customers view delivery for their orders"
         )
     );
 
--- 6. Enable Realtime on deliveries table (idempotent)
+-- 7. Enable Realtime on deliveries table (idempotent)
 DO $$
 BEGIN
     ALTER PUBLICATION supabase_realtime ADD TABLE public.deliveries;
 EXCEPTION
     WHEN duplicate_object THEN NULL;
 END $$;
+
+-- 8. Atomic stock decrement function with execute permissions
+CREATE OR REPLACE FUNCTION public.decrement_stock(p_product_id TEXT, p_quantity INT)
+RETURNS VOID AS $$
+BEGIN
+  UPDATE public.products
+  SET stock = GREATEST(0, stock - p_quantity)
+  WHERE id::text = p_product_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+GRANT EXECUTE ON FUNCTION public.decrement_stock(TEXT, INT) TO authenticated, anon;

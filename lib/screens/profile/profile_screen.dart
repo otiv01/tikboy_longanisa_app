@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'dart:io';
 import '../../providers/auth_provider.dart';
 import '../../providers/user_profile_provider.dart';
 import '../auth/landing_screen.dart';
@@ -162,9 +163,13 @@ class ProfileScreen extends StatelessWidget {
                       height: 80,
                       color: Colors.white.withValues(alpha: 0.2),
                       alignment: Alignment.center,
-                      child: profile.imageUrl.isNotEmpty
-                          ? Image.network(profile.imageUrl, width: 80, height: 80, fit: BoxFit.cover, errorBuilder: (_, __, ___) => Text(initials, style: const TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.bold)))
-                          : Text(initials, style: const TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.bold)),
+                      child: profile.imageUrl.isEmpty
+                          ? Text(initials, style: const TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.bold))
+                          : profile.imageUrl.startsWith('http')
+                              ? Image.network(profile.imageUrl, width: 80, height: 80, fit: BoxFit.cover, errorBuilder: (_, __, ___) => Text(initials, style: const TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.bold)))
+                              : profile.imageUrl.startsWith('assets/')
+                                  ? Image.asset(profile.imageUrl, width: 80, height: 80, fit: BoxFit.cover)
+                                  : Image.file(File(profile.imageUrl), width: 80, height: 80, fit: BoxFit.cover, errorBuilder: (_, __, ___) => Text(initials, style: const TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.bold))),
                     ),
                   ),
                   Positioned(

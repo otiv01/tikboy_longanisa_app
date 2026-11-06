@@ -5,6 +5,7 @@ import '../../models/order_model.dart';
 import '../../services/directus_api_service.dart';
 import '../../providers/auth_provider.dart';
 import 'track_order_screen.dart';
+import '../../widgets/success_dialog.dart';
 
 class OrdersScreen extends StatefulWidget {
   const OrdersScreen({super.key});
@@ -62,8 +63,10 @@ class _OrdersScreenState extends State<OrdersScreen> {
                 final auth = Provider.of<AuthProvider>(context, listen: false);
                 await DirectusApiService().updateOrderStatus(order.id!, 'Refund Requested', auth.accessToken);
                 if (!mounted) return;
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Refund request submitted successfully')),
+                SuccessDialog.show(
+                  context,
+                  title: 'Refund Requested',
+                  message: 'Your refund request has been submitted successfully.',
                 );
                 setState(() => _refreshOrders());
               } catch (e) {
@@ -107,23 +110,33 @@ class _OrdersScreenState extends State<OrdersScreen> {
           }
 
           final orders = snapshot.data!;
-          final activeOrders = orders.where((o) => o.status != 'Delivered' && o.status != 'Cancelled').toList();
-          final orderHistory = orders.where((o) => o.status == 'Delivered' || o.status == 'Cancelled').toList();
+          final activeOrders = orders.where((o) => o.status.toLowerCase() != 'cancelled' && (o.status.toLowerCase() != 'delivered' || o.rating == null)).toList();
+
+          if (activeOrders.isEmpty) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(32.0),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.assignment_outlined, size: 80, color: Colors.grey[300]),
+                    const SizedBox(height: 16),
+                    const Text('No Active Orders', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87)),
+                    const SizedBox(height: 8),
+                    const Text('Your ongoing orders will appear here.\nCheck Order History in your Profile for past orders.', textAlign: TextAlign.center, style: TextStyle(color: Colors.grey, fontSize: 13)),
+                  ],
+                ),
+              ),
+            );
+          }
 
           return RefreshIndicator(
             onRefresh: () async => setState(() => _refreshOrders()),
             child: ListView(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
               children: [
-                if (activeOrders.isNotEmpty) ...[
-                  _buildSectionTitle('Active Orders', hasDot: true),
-                  ...activeOrders.map((o) => _buildActiveOrderCard(o)),
-                ],
-                const SizedBox(height: 25),
-                if (orderHistory.isNotEmpty) ...[
-                  _buildSectionTitle('Order History'),
-                  ...orderHistory.map((o) => _buildHistoryOrderCard(o)),
-                ],
+                _buildSectionTitle('Active Orders', hasDot: true),
+                ...activeOrders.map((o) => _buildActiveOrderCard(o)),
               ],
             ),
           );
@@ -228,13 +241,14 @@ class _OrdersScreenState extends State<OrdersScreen> {
                   child: SizedBox(
                     height: 45,
                     child: ElevatedButton.icon(
-                      onPressed: () {
-                        Navigator.push(
+                      onPressed: () async {
+                        await Navigator.push(
                           context,
                           MaterialPageRoute(
                             builder: (_) => TrackOrderScreen(orderId: order.id ?? ''),
                           ),
                         );
+                        setState(() => _refreshOrders());
                       },
                       icon: const Icon(Icons.directions_bike, size: 18),
                       label: const Text('Track Order', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
@@ -261,123 +275,6 @@ class _OrdersScreenState extends State<OrdersScreen> {
                     ),
                   ),
                 ],
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildHistoryOrderCard(OrderModel order) {
-    Color statusColor = order.status == 'Delivered' ? Colors.teal : Colors.grey;
-    IconData statusIcon = order.status == 'Delivered' ? Icons.check_circle_outline : Icons.cancel_outlined;
-
-    String displayId = order.id ?? '';
-    if (displayId.length > 8) {
-      displayId = displayId.substring(0, 8).toUpperCase();
-    }
-
-    return Card(
-      elevation: 0,
-      margin: const EdgeInsets.only(bottom: 15),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-        side: BorderSide(color: Colors.grey[200]!),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('ORD-$displayId', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                    Text(DateFormat('MMM dd, yyyy • h:mm a').format(order.date), style: const TextStyle(color: Colors.grey, fontSize: 11)),
-                  ],
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                  decoration: BoxDecoration(
-                    color: statusColor.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(statusIcon, size: 14, color: statusColor),
-                      const SizedBox(width: 4),
-                      Text(order.status, style: TextStyle(color: statusColor, fontSize: 11, fontWeight: FontWeight.bold)),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
-            ...order.items.map((item) => _buildOrderItem(item.name, item.price, qty: item.quantity)),
-            if (order.address != null && order.address!.isNotEmpty) ...[
-              const Divider(height: 30),
-              Row(
-                children: [
-                  const Icon(Icons.location_on_outlined, size: 14, color: Colors.grey),
-                  const SizedBox(width: 4),
-                  Expanded(
-                    child: Text(
-                      order.address!,
-                      style: const TextStyle(color: Colors.grey, fontSize: 11),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-            const Divider(height: 30),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text('Total', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey)),
-                Text('₱${order.totalAmount.toInt()}', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.red, fontSize: 16)),
-              ],
-            ),
-            const SizedBox(height: 20),
-            Row(
-              children: [
-                Expanded(
-                  child: SizedBox(
-                    height: 40,
-                    child: ElevatedButton.icon(
-                      onPressed: () {},
-                      icon: const Icon(Icons.refresh, size: 16),
-                      label: const Text('Reorder', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.red,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                        elevation: 0,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: SizedBox(
-                    height: 40,
-                    child: OutlinedButton.icon(
-                      onPressed: () {},
-                      icon: const Icon(Icons.receipt_long, size: 16),
-                      label: const Text('View Details', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: Colors.black87,
-                        side: BorderSide(color: Colors.grey[300]!),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                      ),
-                    ),
-                  ),
-                ),
               ],
             ),
           ],

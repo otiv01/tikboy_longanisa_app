@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../../models/order_model.dart';
 import '../../services/directus_api_service.dart';
 import '../../providers/auth_provider.dart';
+import '../orders/order_detail_screen.dart';
 
 class OrderHistoryScreen extends StatefulWidget {
   const OrderHistoryScreen({super.key});
@@ -123,78 +124,88 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
     }
 
     Color statusColor = Colors.orange;
-    if (order.status == 'Delivered') {
+    if (order.status.toLowerCase() == 'delivered') {
       statusColor = Colors.teal;
-    } else if (order.status == 'Cancelled') {
+    } else if (order.status.toLowerCase() == 'cancelled') {
       statusColor = Colors.grey;
     }
 
     final itemsSummary = order.items.map((i) => '${i.quantity}x ${i.name}').join(', ');
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 15),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.grey[200]!),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text('ORD-$displayId', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: statusColor.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Text(
-                  order.status,
-                  style: TextStyle(color: statusColor, fontSize: 12, fontWeight: FontWeight.bold),
-                ),
-              ),
-            ],
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => OrderDetailScreen(order: order),
           ),
-          const SizedBox(height: 12),
-          Text(
-            itemsSummary.isNotEmpty ? itemsSummary : 'No items specified',
-            style: TextStyle(color: Colors.grey[600], fontSize: 14),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-          ),
-          const SizedBox(height: 8),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(DateFormat('MMM dd, yyyy • h:mm a').format(order.date), style: const TextStyle(color: Colors.grey, fontSize: 12)),
-              Text(
-                '₱${order.totalAmount.toInt()}',
-                style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.red, fontSize: 16),
-              ),
-            ],
-          ),
-          if (order.address != null && order.address!.isNotEmpty) ...[
-            const SizedBox(height: 6),
+        );
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 15),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: Colors.grey[200]!),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
             Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Icon(Icons.location_on_outlined, size: 14, color: Colors.grey),
-                const SizedBox(width: 4),
-                Expanded(
+                Text('ORD-$displayId', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: statusColor.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
                   child: Text(
-                    order.address!,
-                    style: const TextStyle(color: Colors.grey, fontSize: 12),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                    order.status,
+                    style: TextStyle(color: statusColor, fontSize: 12, fontWeight: FontWeight.bold),
                   ),
                 ),
               ],
             ),
+            const SizedBox(height: 12),
+            Text(
+              itemsSummary.isNotEmpty ? itemsSummary : 'No items specified',
+              style: TextStyle(color: Colors.grey[600], fontSize: 14),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(DateFormat('MMM dd, yyyy • h:mm a').format(order.date), style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                Text(
+                  '₱${order.totalAmount.toInt()}',
+                  style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.red, fontSize: 16),
+                ),
+              ],
+            ),
+            if (order.address != null && order.address!.isNotEmpty) ...[
+              const SizedBox(height: 6),
+              Row(
+                children: [
+                  const Icon(Icons.location_on_outlined, size: 14, color: Colors.grey),
+                  const SizedBox(width: 4),
+                  Expanded(
+                    child: Text(
+                      order.address!,
+                      style: const TextStyle(color: Colors.grey, fontSize: 12),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ],
-        ],
+        ),
       ),
     );
   }

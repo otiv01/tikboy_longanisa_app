@@ -7,6 +7,7 @@ class OrderModel {
   final DateTime date;
   final String status;
   final String? address;
+  final int? rating;
 
   OrderModel({
     this.id,
@@ -15,6 +16,7 @@ class OrderModel {
     required this.date,
     this.status = 'Pending',
     this.address,
+    this.rating,
   });
 
   Map<String, dynamic> toJson() {
@@ -50,6 +52,7 @@ class OrderModel {
       totalAmount: (json['total'] as num?)?.toDouble() ?? 0.0,
       status: json['status']?.toString() ?? 'Pending',
       address: json['address']?.toString(),
+      rating: (json['rating'] as num?)?.toInt(),
       date: json['date_created'] != null 
           ? DateTime.parse(json['date_created'].toString()) 
           : DateTime.now(),

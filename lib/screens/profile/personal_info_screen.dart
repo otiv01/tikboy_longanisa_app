@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:image_picker/image_picker.dart';
+import 'dart:io';
 import '../../providers/user_profile_provider.dart';
+import '../../widgets/success_dialog.dart';
 
 class PersonalInfoScreen extends StatefulWidget {
   const PersonalInfoScreen({super.key});
@@ -38,38 +41,75 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
     super.dispose();
   }
 
+  ImageProvider? _getImageProvider(String path) {
+    if (path.isEmpty) return null;
+    if (path.startsWith('http')) {
+      return NetworkImage(path);
+    } else if (path.startsWith('assets/')) {
+      return AssetImage(path) as ImageProvider;
+    } else {
+      return FileImage(File(path));
+    }
+  }
+
   void _showImagePickerDialog() {
-    final urlController = TextEditingController(text: _imageUrl);
-    showDialog(
+    showModalBottomSheet(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Update Profile Picture'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: urlController,
-              decoration: const InputDecoration(
-                labelText: 'Image URL',
-                hintText: 'Enter image URL (https://...)',
-                border: OutlineInputBorder(),
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(20.0),
+          child: Wrap(
+            children: [
+              const Text(
+                'Change Profile Picture',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
-            onPressed: () {
-              setState(() {
-                _imageUrl = urlController.text.trim();
-              });
-              Navigator.pop(ctx);
-            },
-            child: const Text('Set Image'),
+              const SizedBox(height: 20),
+              ListTile(
+                leading: const Icon(Icons.photo_library, color: Colors.red),
+                title: const Text('Choose from Gallery'),
+                onTap: () async {
+                  Navigator.pop(ctx);
+                  final picker = ImagePicker();
+                  final XFile? image = await picker.pickImage(
+                    source: ImageSource.gallery,
+                    maxWidth: 800,
+                    maxHeight: 800,
+                    imageQuality: 85,
+                  );
+                  if (image != null) {
+                    setState(() {
+                      _imageUrl = image.path;
+                    });
+                  }
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.camera_alt, color: Colors.red),
+                title: const Text('Take a Photo'),
+                onTap: () async {
+                  Navigator.pop(ctx);
+                  final picker = ImagePicker();
+                  final XFile? image = await picker.pickImage(
+                    source: ImageSource.camera,
+                    maxWidth: 800,
+                    maxHeight: 800,
+                    imageQuality: 85,
+                  );
+                  if (image != null) {
+                    setState(() {
+                      _imageUrl = image.path;
+                    });
+                  }
+                },
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -83,8 +123,10 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
     );
 
     setState(() => _isEditing = false);
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Profile updated successfully! 🎉'), backgroundColor: Colors.green),
+    SuccessDialog.show(
+      context,
+      title: 'Profile Updated',
+      message: 'Your personal information and profile picture have been updated successfully! 🎉',
     );
   }
 
@@ -121,7 +163,7 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
                   CircleAvatar(
                     radius: 50,
                     backgroundColor: Colors.red[50],
-                    backgroundImage: _imageUrl.isNotEmpty ? NetworkImage(_imageUrl) : null,
+                    backgroundImage: _imageUrl.isNotEmpty ? _getImageProvider(_imageUrl) : null,
                     child: _imageUrl.isEmpty
                         ? const Icon(Icons.person, size: 50, color: Colors.red)
                         : null,

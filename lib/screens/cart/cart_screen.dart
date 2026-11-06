@@ -7,7 +7,9 @@ import '../../services/directus_api_service.dart';
 import '../../models/order_model.dart';
 import '../../providers/notification_provider.dart';
 import '../../models/notification_model.dart';
+import '../../providers/loyalty_provider.dart';
 import '../profile/saved_addresses_screen.dart';
+import '../../widgets/success_dialog.dart';
 
 class CartScreen extends StatefulWidget {
   const CartScreen({super.key});
@@ -73,9 +75,12 @@ class _CartScreenState extends State<CartScreen> {
         ),
       );
 
+      context.read<LoyaltyProvider>().addPointsForOrder(cart.totalAmount);
       cart.clearCart();
-      scaffoldMessenger.showSnackBar(
-        const SnackBar(content: Text('Order placed successfully! 🎉'), backgroundColor: Colors.green),
+      SuccessDialog.show(
+        context,
+        title: 'Order Placed!',
+        message: 'Your order totaling ₱${cart.totalAmount.toInt()} has been successfully placed! 🎉',
       );
     } catch (e) {
       if (mounted) {

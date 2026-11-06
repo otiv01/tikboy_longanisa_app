@@ -11,6 +11,7 @@ class ChatbotDialog extends StatefulWidget {
 
 class _ChatbotDialogState extends State<ChatbotDialog> {
   final TextEditingController _controller = TextEditingController();
+  bool _isLoading = false;
   final List<Map<String, dynamic>> _messages = [
     {
       'text': 'Hello! Welcome to Tikboy Longanisa. 🤖 How can I help you today?',
@@ -19,21 +20,32 @@ class _ChatbotDialogState extends State<ChatbotDialog> {
   ];
 
   Future<void> _callGeminiAI(String userMessage) async {
-    const apiKey = String.fromEnvironment('GEMINI_API_KEY', defaultValue: 'YOUR_GEMINI_API_KEY');
-    final url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=$apiKey';
+    const apiKey = 'YOUR_API_KEY';
+    
+    final url = apiKey.startsWith('AQ')
+        ? 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent'
+        : 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=$apiKey';
+
+    final headers = {
+      'Content-Type': 'application/json',
+      if (apiKey.startsWith('AQ'))
+        'Authorization': 'Bearer $apiKey'
+    };
 
     try {
       final response = await http.post(
         Uri.parse(url),
-        headers: {'Content-Type': 'application/json'},
+        headers: headers,
         body: json.encode({
           'system_instruction': {
-            'parts': {
-              'text': 'You are Tikboy Bot, a friendly AI customer support assistant for Tikboy Longanisa store in Tayabas, Quezon. '
-                      'Our menu & prices: Pork Longanisa (Regular: ₱85/₱170, Spicy: ₱90/₱180, Sweet: ₱200/kilo), '
-                      'Chicken Longanisa (₱75/₱150), Embutido (₱50/₱100), Crispy Chili Garlic Oil (₱150). '
-                      'Delivery is ₱40, but FREE for orders over ₱300. Customers can request refunds in My Orders.'
-            }
+            'parts': [
+              {
+                'text': 'You are TikBot AI, a friendly AI customer support assistant for Tikboy Longanisa store in Tayabas, Quezon. '
+                        'Our menu & prices: Pork Longanisa (Regular: ₱85/₱170, Spicy: ₱90/₱180, Sweet: ₱200/kilo), '
+                        'Chicken Longanisa (₱75/₱150), Embutido (₱50/₱100), Crispy Chili Garlic Oil (₱150). '
+                        'Delivery is ₱40, but FREE for orders over ₱300. Customers can request refunds in My Orders.'
+              }
+            ]
           },
           'contents': [
             {
@@ -51,17 +63,18 @@ class _ChatbotDialogState extends State<ChatbotDialog> {
 
         if (!mounted) return;
         setState(() {
+          _isLoading = false;
           _messages.add({
             'text': aiReply,
             'isUser': false,
           });
         });
       } else {
-        // Fallback if API fails due to billing/quota limits
+        debugPrint('Gemini API Error: ${response.statusCode} - ${response.body}');
         _fallbackResponse(userMessage);
       }
     } catch (e) {
-      // Fallback on network error
+      debugPrint('Gemini API Exception: $e');
       _fallbackResponse(userMessage);
     }
   }
@@ -81,10 +94,13 @@ class _ChatbotDialogState extends State<ChatbotDialog> {
       response = "Hi there! Ready for some fresh longganisa? 😋";
     } else if (msg.contains('support') || msg.contains('help')) {
       response = "Our support team is always ready. What do you need assistance with?";
+    } else if (msg.contains('origin') || msg.contains('originate') || msg.contains('history') || msg.contains('where')) {
+      response = "Longanisa traces its roots to Spanish 'longaniza' introduced during the Spanish colonial period, famously localized in Lucban, Quezon! 🇵🇭";
     }
 
     if (!mounted) return;
     setState(() {
+      _isLoading = false;
       _messages.add({
         'text': response,
         'isUser': false,
@@ -101,73 +117,51 @@ class _ChatbotDialogState extends State<ChatbotDialog> {
         'text': text,
         'isUser': true,
       });
+      _isLoading = true;
     });
     if (textToSend == null) {
       _controller.clear();
     }
 
-    // Call Google Gemini API (with smart offline fallback)
     _callGeminiAI(text);
   }
 
   @override
   Widget build(BuildContext context) {
     return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      insetPadding: const EdgeInsets.all(15),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      insetPadding: const EdgeInsets.all(16),
       child: Container(
         width: double.infinity,
-        height: 520,
+        height: 540,
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(24),
         ),
         child: Column(
           children: [
-            // Top Bar (matching screenshot style)
+            // Header: TikBot AI (subtitle removed)
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-              decoration: const BoxDecoration(
-                color: Color(0xFF7B2CBF), // Rich purple header matching screenshot
-                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Colors.red.shade800, Colors.deepOrange.shade600],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
               ),
               child: Row(
                 children: [
-                  Stack(
-                    children: [
-                      const CircleAvatar(
-                        backgroundColor: Colors.white,
-                        radius: 18,
-                        child: Icon(Icons.smart_toy, color: Color(0xFF7B2CBF), size: 20),
-                      ),
-                      Positioned(
-                        right: 0,
-                        bottom: 0,
-                        child: Container(
-                          width: 10,
-                          height: 10,
-                          decoration: const BoxDecoration(
-                            color: Colors.green,
-                            shape: BoxShape.circle,
-                            border: Border.fromBorderSide(BorderSide(color: Colors.white, width: 1.5)),
-                          ),
-                        ),
-                      ),
-                    ],
+                  const CircleAvatar(
+                    backgroundColor: Colors.white,
+                    radius: 20,
+                    child: Icon(Icons.smart_toy, color: Colors.red, size: 22),
                   ),
                   const SizedBox(width: 12),
-                  const Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'TikBot',
-                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
-                      ),
-                      Text(
-                        '🟢 Online Now',
-                        style: TextStyle(color: Colors.white70, fontSize: 11),
-                      ),
-                    ],
+                  const Text(
+                    'TikBot AI',
+                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 17),
                   ),
                   const Spacer(),
                   IconButton(
@@ -177,8 +171,6 @@ class _ChatbotDialogState extends State<ChatbotDialog> {
                 ],
               ),
             ),
-
-            // Chat Messages Area
             Expanded(
               child: ListView.builder(
                 padding: const EdgeInsets.all(16),
@@ -187,44 +179,26 @@ class _ChatbotDialogState extends State<ChatbotDialog> {
                   final msg = _messages[index];
                   final isUser = msg['isUser'] as bool;
                   return Column(
-                    crossAxisAlignment: isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      if (!isUser)
-                        const Padding(
-                          padding: EdgeInsets.only(left: 4, bottom: 4),
-                          child: Text('Tikboy Bot', style: TextStyle(color: Colors.grey, fontSize: 10)),
-                        ),
-                      Container(
-                        margin: const EdgeInsets.only(bottom: 12),
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                        constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.7),
-                        decoration: BoxDecoration(
-                          color: isUser ? const Color(0xFF7B2CBF) : Colors.grey[100],
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: Text(
-                          msg['text'],
-                          style: TextStyle(
-                            color: isUser ? Colors.white : Colors.black87,
-                            fontSize: 13,
-                          ),
-                        ),
-                      ),
-                      // Quick suggestion chips after first message
+                      _buildMessageBubble(msg['text'], isUser),
                       if (!isUser && index == 0) ...[
                         const SizedBox(height: 4),
-                        Wrap(
-                          spacing: 6,
-                          runSpacing: 6,
-                          children: ['Prices', 'Delivery', 'Refunds'].map((chipText) {
-                            return ActionChip(
-                              label: Text(chipText, style: const TextStyle(color: Color(0xFF7B2CBF), fontSize: 12)),
-                              backgroundColor: const Color(0xFF7B2CBF).withValues(alpha: 0.1),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                              side: BorderSide.none,
-                              onPressed: () => _handleSend(chipText),
-                            );
-                          }).toList(),
+                        Padding(
+                          padding: const EdgeInsets.only(left: 36.0),
+                          child: Wrap(
+                            spacing: 6,
+                            runSpacing: 6,
+                            children: ['Prices', 'Delivery', 'Origin'].map((chipText) {
+                              return ActionChip(
+                                label: Text(chipText, style: const TextStyle(color: Colors.red, fontSize: 12, fontWeight: FontWeight.bold)),
+                                backgroundColor: Colors.red.withValues(alpha: 0.1),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                                side: BorderSide.none,
+                                onPressed: () => _handleSend(chipText),
+                              );
+                            }).toList(),
+                          ),
                         ),
                         const SizedBox(height: 10),
                       ],
@@ -233,37 +207,104 @@ class _ChatbotDialogState extends State<ChatbotDialog> {
                 },
               ),
             ),
-
-            // Bottom Input Area
+            if (_isLoading)
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 4),
+                child: LinearProgressIndicator(color: Colors.red, minHeight: 2),
+              ),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
                 color: Colors.white,
                 border: Border(top: BorderSide(color: Colors.grey[200]!)),
-                borderRadius: const BorderRadius.vertical(bottom: Radius.circular(20)),
+                borderRadius: const BorderRadius.vertical(bottom: Radius.circular(24)),
               ),
               child: Row(
                 children: [
                   Expanded(
                     child: TextField(
                       controller: _controller,
-                      decoration: const InputDecoration(
-                        hintText: 'Reply to Tikboy Bot...',
-                        hintStyle: TextStyle(color: Colors.grey, fontSize: 13),
-                        border: InputBorder.none,
+                      decoration: InputDecoration(
+                        hintText: 'Ask anything about our longanisa...',
+                        hintStyle: const TextStyle(color: Colors.grey, fontSize: 13),
+                        filled: true,
+                        fillColor: Colors.grey[100],
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(24),
+                          borderSide: BorderSide.none,
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                       ),
                       onSubmitted: (_) => _handleSend(),
                     ),
                   ),
-                  IconButton(
-                    icon: const Icon(Icons.send, color: Color(0xFF7B2CBF)),
-                    onPressed: () => _handleSend(),
+                  const SizedBox(width: 8),
+                  CircleAvatar(
+                    backgroundColor: Colors.red.shade700,
+                    child: IconButton(
+                      icon: const Icon(Icons.send, color: Colors.white, size: 18),
+                      onPressed: () => _handleSend(),
+                    ),
                   ),
                 ],
               ),
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildMessageBubble(String text, bool isUser) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 14),
+      child: Row(
+        mainAxisAlignment: isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          if (!isUser) ...[
+            const CircleAvatar(
+              radius: 14,
+              backgroundColor: Colors.red,
+              child: Icon(Icons.smart_toy, size: 14, color: Colors.white),
+            ),
+            const SizedBox(width: 8),
+          ],
+          Flexible(
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.7),
+              decoration: BoxDecoration(
+                color: isUser ? Colors.red.shade700 : Colors.grey[100],
+                borderRadius: BorderRadius.only(
+                  topLeft: const Radius.circular(20),
+                  topRight: const Radius.circular(20),
+                  bottomLeft: Radius.circular(isUser ? 20 : 4),
+                  bottomRight: Radius.circular(isUser ? 4 : 20),
+                ),
+                boxShadow: [
+                  BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 4, offset: const Offset(0, 2)),
+                ],
+              ),
+              child: Text(
+                text,
+                style: TextStyle(
+                  color: isUser ? Colors.white : Colors.black87,
+                  fontSize: 13.5,
+                  height: 1.3,
+                ),
+              ),
+            ),
+          ),
+          if (isUser) ...[
+            const SizedBox(width: 8),
+            const CircleAvatar(
+              radius: 14,
+              backgroundColor: Colors.grey,
+              child: Icon(Icons.person, size: 14, color: Colors.white),
+            ),
+          ],
+        ],
       ),
     );
   }

@@ -1,10 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../providers/loyalty_provider.dart';
 
 class LoyaltyPointsScreen extends StatelessWidget {
   const LoyaltyPointsScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final loyalty = context.watch<LoyaltyProvider>();
+    double pesoValue = loyalty.points * 0.10; // 10 pts = 1 peso value approx
+
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -16,7 +21,7 @@ class LoyaltyPointsScreen extends StatelessWidget {
       body: SingleChildScrollView(
         child: Column(
           children: [
-            _buildPointsCard(),
+            _buildPointsCard(loyalty.points, pesoValue),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
               child: Column(
@@ -37,10 +42,7 @@ class LoyaltyPointsScreen extends StatelessWidget {
                   const SizedBox(height: 30),
                   _buildSectionTitle('Points History'),
                   const SizedBox(height: 15),
-                  _buildHistoryItem('Order #TK1024', '+45 pts', 'Mar 28, 2026', Colors.green),
-                  _buildHistoryItem('Product Review', '+5 pts', 'Mar 25, 2026', Colors.green),
-                  _buildHistoryItem('Redeemed Voucher', '-500 pts', 'Mar 10, 2026', Colors.red),
-                  _buildHistoryItem('Order #TK0988', '+32 pts', 'Mar 05, 2026', Colors.green),
+                  ...loyalty.history.map((item) => _buildHistoryItem(item.title, item.points, item.date, item.color)),
                   
                   const SizedBox(height: 20),
                 ],
@@ -52,7 +54,7 @@ class LoyaltyPointsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildPointsCard() {
+  Widget _buildPointsCard(int points, double pesoValue) {
     return Container(
       margin: const EdgeInsets.all(20),
       width: double.infinity,
@@ -66,7 +68,7 @@ class LoyaltyPointsScreen extends StatelessWidget {
         borderRadius: BorderRadius.circular(30),
         boxShadow: [
           BoxShadow(
-            color: Colors.red.withOpacity(0.3),
+            color: Colors.red.withValues(alpha: 0.3),
             blurRadius: 15,
             offset: const Offset(0, 8),
           ),
@@ -79,32 +81,32 @@ class LoyaltyPointsScreen extends StatelessWidget {
             style: TextStyle(color: Colors.white70, fontSize: 16),
           ),
           const SizedBox(height: 10),
-          const Row(
+          Row(
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.baseline,
             textBaseline: TextBaseline.alphabetic,
             children: [
               Text(
-                '320',
-                style: TextStyle(color: Colors.white, fontSize: 48, fontWeight: FontWeight.bold),
+                '$points',
+                style: const TextStyle(color: Colors.white, fontSize: 48, fontWeight: FontWeight.bold),
               ),
-              SizedBox(width: 5),
-              Text(
+              const SizedBox(width: 5),
+              const Text(
                 'PTS',
                 style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
               ),
             ],
           ),
           const SizedBox(height: 10),
-          const Text(
-            '≈ ₱32.00 Value',
-            style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w500),
+          Text(
+            '≈ ₱${pesoValue.toStringAsFixed(2)} Value',
+            style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w500),
           ),
           const SizedBox(height: 20),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 8),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
+              color: Colors.white.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(20),
             ),
             child: const Row(
@@ -160,7 +162,7 @@ class LoyaltyPointsScreen extends StatelessWidget {
         children: [
           Container(
             padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(color: color.withOpacity(0.1), shape: BoxShape.circle),
+            decoration: BoxDecoration(color: color.withValues(alpha: 0.1), shape: BoxShape.circle),
             child: Icon(Icons.confirmation_number_outlined, color: color, size: 24),
           ),
           const SizedBox(width: 16),

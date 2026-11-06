@@ -10,12 +10,23 @@ import 'screens/profile/profile_screen.dart';
 class MainNavigationScreen extends StatefulWidget {
   const MainNavigationScreen({super.key});
 
+  static void jumpToTab(BuildContext context, int index) {
+    final state = context.findAncestorStateOfType<_MainNavigationScreenState>();
+    state?.setIndex(index);
+  }
+
   @override
   State<MainNavigationScreen> createState() => _MainNavigationScreenState();
 }
 
 class _MainNavigationScreenState extends State<MainNavigationScreen> {
   int _selectedIndex = 0;
+
+  void setIndex(int index) {
+    setState(() {
+      _selectedIndex = index;
+    });
+  }
 
   final List<Widget> _screens = const [
     HomeScreen(),

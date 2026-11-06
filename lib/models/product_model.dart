@@ -6,6 +6,7 @@ class Product {
   final String? imageUrl;
   final bool isBestseller;
   final String? description;
+  final int stock;
 
   Product({
     required this.id,
@@ -15,6 +16,7 @@ class Product {
     this.imageUrl,
     this.isBestseller = false,
     this.description,
+    this.stock = 10,
   });
 
   factory Product.fromJson(Map<String, dynamic> json) {
@@ -31,6 +33,17 @@ class Product {
       }
     }
 
+    // Safely parse stock
+    int stockVal = 10;
+    var rawStock = json['stock'];
+    if (rawStock != null) {
+      if (rawStock is num) {
+        stockVal = rawStock.toInt();
+      } else if (rawStock is String) {
+        stockVal = int.tryParse(rawStock) ?? 10;
+      }
+    }
+
     return Product(
       id: json['id'],
       name: json['name']?.toString() ?? 'Unknown Product',
@@ -39,6 +52,7 @@ class Product {
       imageUrl: json['image']?.toString(), 
       isBestseller: bestseller,
       description: json['description']?.toString(),
+      stock: stockVal,
     );
   }
 

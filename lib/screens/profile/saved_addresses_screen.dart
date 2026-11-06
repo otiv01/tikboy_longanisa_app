@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/address_provider.dart';
+import '../../widgets/success_dialog.dart';
 
 class SavedAddressesScreen extends StatefulWidget {
   const SavedAddressesScreen({super.key});
@@ -48,6 +49,11 @@ class _SavedAddressesScreenState extends State<SavedAddressesScreen> {
                 _labelController.clear();
                 _addressController.clear();
                 Navigator.pop(ctx);
+                SuccessDialog.show(
+                  context,
+                  title: 'Address Added',
+                  message: 'Your new delivery address has been saved successfully! 📍',
+                );
               }
             },
             child: const Text('Add'),

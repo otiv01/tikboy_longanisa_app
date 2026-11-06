@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:geolocator/geolocator.dart';
 import '../models/product_model.dart';
 import '../models/order_model.dart';
 
@@ -42,12 +43,14 @@ class DirectusApiService {
     try {
       final data = await _supabase.from('products').select();
       if ((data as List).isEmpty) {
-        return _getLocalFallbackProducts();
+        return _getLocalFallbackProducts().where((p) => p.stock > 0).toList();
       }
-      return data.map((json) => Product.fromJson(json)).toList();
+      final allProducts = data.map((json) => Product.fromJson(json)).toList();
+      // Filter out out-of-stock products so they are not visible to the user
+      return allProducts.where((p) => p.stock > 0).toList();
     } catch (e) {
       debugPrint('Error fetching products from Supabase (using offline fallback): $e');
-      return _getLocalFallbackProducts();
+      return _getLocalFallbackProducts().where((p) => p.stock > 0).toList();
     }
   }
 
@@ -127,14 +130,38 @@ class DirectusApiService {
         }
       }
 
-      // 2. Insert order in Supabase
-      await _supabase.from('orders').insert({
-        'user_id': _supabase.auth.currentUser?.id,
-        'total': order.totalAmount,
-        'status': order.status,
-        'address': order.address,
-        'items': order.items.map((item) => item.toJson()).toList(),
-      });
+      double? destLat;
+      double? destLng;
+      try {
+        Position pos = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
+        destLat = pos.latitude;
+        destLng = pos.longitude;
+      } catch (_) {
+        destLat = 14.0200;
+        destLng = 121.5910;
+      }
+
+      // 2. Insert order in Supabase (Database trigger automatically assigns an available rider securely)
+      try {
+        await _supabase.from('orders').insert({
+          'user_id': _supabase.auth.currentUser?.id,
+          'total': order.totalAmount,
+          'status': order.status,
+          'address': order.address,
+          'destination_lat': destLat,
+          'destination_lng': destLng,
+          'items': order.items.map((item) => item.toJson()).toList(),
+        });
+      } catch (e) {
+        debugPrint('Fallback order insert without destination columns: $e');
+        await _supabase.from('orders').insert({
+          'user_id': _supabase.auth.currentUser?.id,
+          'total': order.totalAmount,
+          'status': order.status,
+          'address': order.address,
+          'items': order.items.map((item) => item.toJson()).toList(),
+        });
+      }
 
       // 3. Deduct stock for each item using atomic RPC function (bypasses RLS & avoids race conditions)
       for (var item in order.items) {
@@ -183,6 +210,7 @@ class DirectusApiService {
         'address': json['address'],
         'items': json['items'],
         'date_created': json['date_created'],
+        'rating': json['rating'],
       })).toList();
     } catch (e) {
       throw Exception('Failed to load orders from Supabase: $e');

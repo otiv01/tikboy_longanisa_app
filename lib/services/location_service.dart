@@ -68,21 +68,38 @@ class LocationService {
     );
   }
 
-  void startSharing({required String orderId, required String riderId}) {
+  void startSharing({required String orderId, required String riderId}) async {
     if (_isSharing) return;
     _isSharing = true;
 
+    // Immediately get and sync current position on start
+    try {
+      Position initialPos = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
+      _lastPosition = initialPos;
+      final supabase = Supabase.instance.client;
+      await supabase.from('deliveries').upsert({
+        'order_id': orderId,
+        'rider_id': riderId,
+        'lat': initialPos.latitude,
+        'lng': initialPos.longitude,
+        'updated_at': DateTime.now().toIso8601String(),
+      });
+      debugPrint('📍 Rider initial location synced: ${initialPos.latitude}, ${initialPos.longitude}');
+    } catch (e) {
+      debugPrint('❌ Error syncing initial rider location: $e');
+    }
+
     const locationSettings = LocationSettings(
       accuracy: LocationAccuracy.high,
-      distanceFilter: 10,
+      distanceFilter: 2,
     );
 
     _positionStream = Geolocator.getPositionStream(locationSettings: locationSettings).listen((Position position) {
       _lastPosition = position;
     });
 
-    // Throttle upserts to deliveries table every 4 seconds
-    _throttleTimer = Timer.periodic(const Duration(seconds: 4), (timer) async {
+    // Throttle upserts to deliveries table every 3 seconds
+    _throttleTimer = Timer.periodic(const Duration(seconds: 3), (timer) async {
       if (_lastPosition != null && _isSharing) {
         try {
           final supabase = Supabase.instance.client;
